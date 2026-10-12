@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Store,
@@ -15,7 +15,9 @@ import {
   CalendarCheck,
   ShoppingCart,
   ShieldCheck,
-  Star
+  Star,
+  CheckCircle2,
+  User,
 } from 'lucide-react';
 import { mockRetailers, mockVisits, mockOrders } from '../data/mockData';
 import { retailersApi } from '../api/retailersApi';
@@ -25,12 +27,38 @@ export const Retailers: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [retailersList, setRetailersList] = useState<Retailer[]>(mockRetailers);
+  const [retailersList, setRetailersList] = useState<Retailer[]>(() => {
+    const saved = localStorage.getItem('fieldassist_retailers');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // Fallback
+      }
+    }
+    return mockRetailers;
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedRetailer, setSelectedRetailer] = useState<Retailer | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'visits' | 'orders'>('info');
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // New outlet form states
+  const [outletName, setOutletName] = useState('');
+  const [ownerName, setOwnerName] = useState('');
+  const [outletPhone, setOutletPhone] = useState('');
+  const [outletType, setOutletType] = useState<Retailer['type']>('Kirana');
+  const [address, setAddress] = useState('');
+  const [territory, setTerritory] = useState('North Delhi');
+  const [city, setCity] = useState('Delhi');
+  const [creditLimit, setCreditLimit] = useState(50000);
+  const [assignedRepName, setAssignedRepName] = useState('Vikram Sharma');
+  const [initialStatus, setInitialStatus] = useState<'Active' | 'Lead'>('Active');
 
   // Fetch real retailers from backend database
   useEffect(() => {
@@ -38,8 +66,11 @@ export const Retailers: React.FC = () => {
       try {
         const data = await retailersApi.getRetailers();
         if (data && data.length > 0) {
-          const existingIds = new Set(data.map((d) => d.id));
-          setRetailersList([...data, ...mockRetailers.filter((m) => !existingIds.has(m.id))]);
+          setRetailersList((prev) => {
+            const existingIds = new Set(data.map((d) => d.id));
+            const merged = [...data, ...prev.filter((m) => !existingIds.has(m.id))];
+            return merged;
+          });
         }
       } catch (err) {
         console.warn('Retailers fetch notice:', err);
@@ -91,6 +122,52 @@ export const Retailers: React.FC = () => {
     navigate('/retailers');
   };
 
+  const handleOpenAddModal = () => {
+    setOutletName('');
+    setOwnerName('');
+    setOutletPhone('+91 ');
+    setAddress('');
+    setCreditLimit(50000);
+    setShowAddModal(true);
+  };
+
+  const handleAddRetailer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!outletName.trim()) return;
+
+    const newCode = `RET-DEL-${String(retailersList.length + 101).padStart(3, '0')}`;
+    const newRetailer: Retailer = {
+      id: `ret-${Date.now()}`,
+      name: outletName.trim(),
+      ownerName: ownerName.trim() || 'Store Proprietor',
+      code: newCode,
+      type: outletType,
+      phone: outletPhone.trim() || '+91 98110 00000',
+      address: address.trim() || 'Main Market, Delhi',
+      territory,
+      city,
+      outstandingBalance: 0,
+      creditLimit: Number(creditLimit) || 50000,
+      lastOrderDate: 'Just Added',
+      lastVisitDate: 'Pending Visit',
+      assignedRepName,
+      assignedRepId: `rep-${Date.now()}`,
+      status: initialStatus,
+      rating: 5.0,
+    };
+
+    // Attempt backend sync
+    retailersApi.createRetailer(newRetailer).catch(() => {});
+
+    const updated = [newRetailer, ...retailersList];
+    setRetailersList(updated);
+    localStorage.setItem('fieldassist_retailers', JSON.stringify(updated));
+    setShowAddModal(false);
+
+    setToastMessage(`Retail outlet "${newRetailer.name}" (${newCode}) added successfully!`);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -98,6 +175,29 @@ export const Retailers: React.FC = () => {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-between text-xs font-semibold shadow-xl"
+          >
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>{toastMessage}</span>
+            </div>
+            <button
+              onClick={() => setToastMessage(null)}
+              className="text-emerald-400 hover:text-white p-1 rounded-lg"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -110,7 +210,10 @@ export const Retailers: React.FC = () => {
           </p>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto">
+        <button
+          onClick={handleOpenAddModal}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
+        >
           <Plus className="w-4 h-4" />
           <span>Add New Retail Outlet</span>
         </button>
@@ -517,6 +620,190 @@ export const Retailers: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Modal: Add New Retail Outlet */}
+      <AnimatePresence>
+        {showAddModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center border border-brand-500/20">
+                    <Store className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white">Add New Retail Outlet</h2>
+                    <p className="text-xs text-slate-400">Onboard retail store into secondary distribution network</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAddRetailer} className="p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-xs font-semibold text-slate-300">Outlet / Store Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={outletName}
+                      onChange={(e) => setOutletName(e.target.value)}
+                      placeholder="e.g. Aggarwal Super Mart"
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Proprietor / Owner Name</label>
+                    <input
+                      type="text"
+                      value={ownerName}
+                      onChange={(e) => setOwnerName(e.target.value)}
+                      placeholder="e.g. Sanjay Aggarwal"
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Contact Phone</label>
+                    <input
+                      type="text"
+                      value={outletPhone}
+                      onChange={(e) => setOutletPhone(e.target.value)}
+                      placeholder="+91 98110 12345"
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Store Category / Type *</label>
+                    <select
+                      value={outletType}
+                      onChange={(e) => setOutletType(e.target.value as any)}
+                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="Kirana">Kirana / Grocery</option>
+                      <option value="Supermarket">Supermarket</option>
+                      <option value="Pharmacy">Pharmacy / Chemist</option>
+                      <option value="Wholesale">Wholesale Distributor</option>
+                      <option value="Electronics">Electronics Mart</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Territory</label>
+                    <select
+                      value={territory}
+                      onChange={(e) => setTerritory(e.target.value)}
+                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="North Delhi">North Delhi</option>
+                      <option value="West Delhi">West Delhi</option>
+                      <option value="South Delhi">South Delhi</option>
+                      <option value="East Delhi">East Delhi</option>
+                      <option value="South Mumbai">South Mumbai</option>
+                      <option value="Bengaluru Central">Bengaluru Central</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-xs font-semibold text-slate-300">Address & Locality *</label>
+                    <input
+                      type="text"
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder="e.g. Shop 12, Main Market, Sector 7, Rohini"
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Credit Limit (₹)</label>
+                    <input
+                      type="number"
+                      step="5000"
+                      min="0"
+                      value={creditLimit}
+                      onChange={(e) => setCreditLimit(Number(e.target.value))}
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-brand-400" />
+                      <span>Assigned Sales Rep</span>
+                    </label>
+                    <select
+                      value={assignedRepName}
+                      onChange={(e) => setAssignedRepName(e.target.value)}
+                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="Vikram Sharma">Vikram Sharma (North Delhi)</option>
+                      <option value="Ananya Verma">Ananya Verma (South Mumbai)</option>
+                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru)</option>
+                      <option value="Priya Patel">Priya Patel (Ahmedabad)</option>
+                      <option value="Amit Singh">Amit Singh (West Delhi)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">City</label>
+                    <input
+                      type="text"
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="Delhi"
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">Onboarding Status</label>
+                    <select
+                      value={initialStatus}
+                      onChange={(e) => setInitialStatus(e.target.value as any)}
+                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    >
+                      <option value="Active">Active Store</option>
+                      <option value="Lead">New Acquisition Lead</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Save & Onboard Outlet</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

@@ -1,16 +1,96 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Target as TargetIcon, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin } from 'lucide-react';
 import { mockTargets } from '../data/mockData';
+import type { Target } from '../types';
 
 export const Targets: React.FC = () => {
+  const [targetsList, setTargetsList] = useState<Target[]>(() => {
+    const saved = localStorage.getItem('fieldassist_targets');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // Fallback
+      }
+    }
+    return mockTargets;
+  });
+
+  const [showAllocateModal, setShowAllocateModal] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Form states
+  const [repName, setRepName] = useState('Vikram Sharma');
+  const [monthYear, setMonthYear] = useState('November 2026');
+  const [salesTargetAmount, setSalesTargetAmount] = useState<number>(1800000);
+  const [visitsTargetCount, setVisitsTargetCount] = useState<number>(160);
+  const [newOutletsTargetCount, setNewOutletsTargetCount] = useState<number>(15);
+
+  const handleOpenAllocateModal = () => {
+    setSalesTargetAmount(1800000);
+    setVisitsTargetCount(160);
+    setNewOutletsTargetCount(15);
+    setShowAllocateModal(true);
+  };
+
+  const handleAllocateTarget = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newTarget: Target = {
+      id: `tgt-${Date.now()}`,
+      repId: `rep-${Date.now()}`,
+      repName,
+      monthYear,
+      salesTargetAmount: Number(salesTargetAmount) || 1500000,
+      salesAchievedAmount: 0,
+      visitsTargetCount: Number(visitsTargetCount) || 150,
+      visitsAchievedCount: 0,
+      newOutletsTargetCount: Number(newOutletsTargetCount) || 12,
+      newOutletsAchievedCount: 0,
+      status: 'On Track',
+    };
+
+    const updated = [newTarget, ...targetsList];
+    setTargetsList(updated);
+    localStorage.setItem('fieldassist_targets', JSON.stringify(updated));
+    setShowAllocateModal(false);
+
+    setToastMessage(`Monthly sales quota allocated for ${repName} (${monthYear}) successfully!`);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="space-y-6"
+      className="space-y-6 max-w-7xl mx-auto"
     >
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-between text-xs font-semibold shadow-xl"
+          >
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>{toastMessage}</span>
+            </div>
+            <button
+              onClick={() => setToastMessage(null)}
+              className="text-emerald-400 hover:text-white p-1 rounded-lg"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -23,7 +103,10 @@ export const Targets: React.FC = () => {
           </p>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto">
+        <button
+          onClick={handleOpenAllocateModal}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
+        >
           <Plus className="w-4 h-4" />
           <span>Allocate Monthly Targets</span>
         </button>
@@ -31,8 +114,12 @@ export const Targets: React.FC = () => {
 
       {/* Target Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockTargets.map((tgt) => {
-          const salesPct = Math.round((tgt.salesAchievedAmount / tgt.salesTargetAmount) * 100);
+        {targetsList.map((tgt) => {
+          const salesPct =
+            tgt.salesTargetAmount > 0
+              ? Math.round((tgt.salesAchievedAmount / tgt.salesTargetAmount) * 100)
+              : 0;
+
           return (
             <div
               key={tgt.id}
@@ -66,7 +153,7 @@ export const Targets: React.FC = () => {
                 </div>
                 <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-gradient-to-r from-brand-500 to-emerald-400 h-full rounded-full"
+                    className="bg-gradient-to-r from-brand-500 to-emerald-400 h-full rounded-full transition-all"
                     style={{ width: `${Math.min(salesPct, 100)}%` }}
                   />
                 </div>
@@ -94,6 +181,146 @@ export const Targets: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Modal: Allocate Monthly Targets */}
+      <AnimatePresence>
+        {showAllocateModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-lg bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-brand-500/10 text-brand-400 flex items-center justify-center border border-brand-500/20">
+                    <TargetIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-white">Allocate Monthly Targets</h2>
+                    <p className="text-xs text-slate-400">Assign revenue quotas and visit targets for field rep</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAllocateModal(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAllocateTarget} className="p-6 space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Select Sales Representative *</span>
+                  </label>
+                  <select
+                    value={repName}
+                    onChange={(e) => setRepName(e.target.value)}
+                    className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="Vikram Sharma">Vikram Sharma (North Delhi)</option>
+                    <option value="Ananya Verma">Ananya Verma (South Mumbai)</option>
+                    <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru)</option>
+                    <option value="Priya Patel">Priya Patel (Ahmedabad)</option>
+                    <option value="Amit Singh">Amit Singh (West Delhi)</option>
+                    <option value="Neha Gupta">Neha Gupta (Kolkata)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Quota Month & Year *</span>
+                  </label>
+                  <select
+                    value={monthYear}
+                    onChange={(e) => setMonthYear(e.target.value)}
+                    className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="October 2026">October 2026</option>
+                    <option value="November 2026">November 2026</option>
+                    <option value="December 2026">December 2026</option>
+                    <option value="January 2027">January 2027</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                    <IndianRupee className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Secondary Sales Revenue Target (₹) *</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="50000"
+                    min="100000"
+                    required
+                    value={salesTargetAmount}
+                    onChange={(e) => setSalesTargetAmount(Number(e.target.value))}
+                    className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                  />
+                  <span className="text-[11px] text-slate-400 block font-mono">
+                    ₹{(salesTargetAmount / 100000).toFixed(2)} Lakhs
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-brand-400" />
+                      <span>Visits Quota</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="10"
+                      max="500"
+                      required
+                      value={visitsTargetCount}
+                      onChange={(e) => setVisitsTargetCount(Number(e.target.value))}
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-300">New Outlets Goal</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      required
+                      value={newOutletsTargetCount}
+                      onChange={(e) => setNewOutletsTargetCount(Number(e.target.value))}
+                      className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllocateModal(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2"
+                  >
+                    <TargetIcon className="w-4 h-4" />
+                    <span>Confirm Target Allocation</span>
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
+
+export default Targets;

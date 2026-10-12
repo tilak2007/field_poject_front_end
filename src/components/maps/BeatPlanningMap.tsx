@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Navigation,
@@ -208,6 +208,13 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [selectedWaypoint, setSelectedWaypoint] = useState<Waypoint | null>(null);
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (selectedBeatId) {
+      setActiveRouteId(selectedBeatId);
+      setSelectedWaypoint(null);
+    }
+  }, [selectedBeatId]);
 
   const currentRoute =
     mockRoutes.find((r) => r.id === activeRouteId) || mockRoutes[0];
