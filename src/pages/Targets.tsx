@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin } from 'lucide-react';
+import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin, Download } from 'lucide-react';
 import { mockTargets } from '../data/mockData';
 import type { Target } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { exportToCsv } from '../utils/exportCsv';
 
 export const Targets: React.FC = () => {
+  const { user } = useAuth();
+  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
+
   const [targetsList, setTargetsList] = useState<Target[]>(() => {
     const saved = localStorage.getItem('fieldassist_targets');
     if (saved) {
@@ -61,6 +66,25 @@ export const Targets: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  const handleExportCsv = () => {
+    exportToCsv(
+      `fieldassist_targets_${new Date().toISOString().split('T')[0]}`,
+      targetsList,
+      [
+        { header: 'Representative', key: 'repName' },
+        { header: 'Month / Cycle', key: 'monthYear' },
+        { header: 'Target Sales (INR)', key: (t) => `₹${t.salesTargetAmount.toLocaleString('en-IN')}` },
+        { header: 'Achieved Sales (INR)', key: (t) => `₹${t.salesAchievedAmount.toLocaleString('en-IN')}` },
+        { header: 'Achievement %', key: (t) => `${Math.round((t.salesAchievedAmount / (t.salesTargetAmount || 1)) * 100)}%` },
+        { header: 'Target Visits', key: 'visitsTargetCount' },
+        { header: 'Achieved Visits', key: 'visitsAchievedCount' },
+        { header: 'Target Outlets', key: 'newOutletsTargetCount' },
+        { header: 'Achieved Outlets', key: 'newOutletsAchievedCount' },
+        { header: 'Status', key: 'status' },
+      ]
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -101,15 +125,46 @@ export const Targets: React.FC = () => {
           <p className="text-slate-400 text-xs mt-1">
             Monthly revenue targets, visit quota tracking, and outlet acquisition goals.
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                user?.role === 'Sales Representative'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : user?.role === 'System Admin'
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                  : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+              }`}
+            >
+              Role: {user?.role || 'Sales Manager'}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {user?.role === 'Sales Representative'
+                ? '• Field Rep: Track Personal Target Fulfillment'
+                : '• Management: Quota Allocation & Achievement Oversight'}
+            </span>
+          </div>
         </div>
 
-        <button
-          onClick={handleOpenAllocateModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Allocate Monthly Targets</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+            title="Export Targets CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-brand-400" />
+            <span>Export CSV</span>
+          </button>
+
+          {isManagerOrAdmin && (
+            <button
+              onClick={handleOpenAllocateModal}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Allocate Monthly Targets</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Target Cards Grid */}

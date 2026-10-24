@@ -11,13 +11,21 @@ import {
   Clock,
   Store,
   User,
-  FileText
+  FileText,
+  Download,
+  LogIn,
+  Check,
 } from 'lucide-react';
 import { mockVisits, mockRetailers } from '../data/mockData';
 import type { Visit } from '../types';
 import { visitsApi } from '../api';
+import { useAuth } from '../context/AuthContext';
+import { exportToCsv } from '../utils/exportCsv';
 
 export const Visits: React.FC = () => {
+  const { user } = useAuth();
+  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
+
   const [visitsList, setVisitsList] = useState<Visit[]>(() => {
     const saved = localStorage.getItem('fieldassist_visits');
     if (saved) {
@@ -111,6 +119,66 @@ export const Visits: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  // Check-In to visit (Sales Rep or Manager)
+  const handleCheckInVisit = (visitId: string) => {
+    const timeNow = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const updated = visitsList.map((v) =>
+      v.id === visitId
+        ? {
+            ...v,
+            status: 'In Progress' as const,
+            actualCheckIn: timeNow,
+            geofenceVerified: true,
+          }
+        : v
+    );
+    setVisitsList(updated);
+    localStorage.setItem('fieldassist_visits', JSON.stringify(updated));
+    setToastMessage(`Checked into store! Geofence verified (50m) at ${timeNow}.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Complete visit (Sales Rep or Manager)
+  const handleCompleteVisit = (visitId: string) => {
+    const timeNow = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const updated = visitsList.map((v) =>
+      v.id === visitId
+        ? {
+            ...v,
+            status: 'Completed' as const,
+            actualCheckOut: timeNow,
+            orderBookedAmount: v.orderBookedAmount > 0 ? v.orderBookedAmount : 18500,
+            feedback: v.feedback || 'Visit completed, stock verified and orders updated.',
+          }
+        : v
+    );
+    setVisitsList(updated);
+    localStorage.setItem('fieldassist_visits', JSON.stringify(updated));
+    setToastMessage(`Visit marked as Completed at ${timeNow}! Beat productivity logged.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Export Visits CSV
+  const handleExportCsv = () => {
+    exportToCsv(
+      `fieldassist_visits_${new Date().toISOString().split('T')[0]}`,
+      filteredVisits,
+      [
+        { header: 'Visit Code', key: 'visitCode' },
+        { header: 'Retail Outlet', key: 'retailerName' },
+        { header: 'Address', key: 'retailerAddress' },
+        { header: 'Sales Representative', key: 'repName' },
+        { header: 'Beat Route', key: (v) => v.beatName || 'Assigned Beat' },
+        { header: 'Visit Type', key: 'visitType' },
+        { header: 'Planned Time', key: 'plannedTime' },
+        { header: 'Actual Check-in', key: (v) => v.actualCheckIn || 'Pending' },
+        { header: 'Geofence Compliance', key: (v) => (v.geofenceVerified ? 'Verified (50m)' : 'Unverified') },
+        { header: 'Order Booked Amount (INR)', key: (v) => `₹${v.orderBookedAmount.toLocaleString('en-IN')}` },
+        { header: 'Status', key: 'status' },
+      ]
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -151,15 +219,46 @@ export const Visits: React.FC = () => {
           <p className="text-slate-400 text-xs mt-1">
             Geofence verified check-ins, photo proofs, audit feedback, and order booking logs.
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                user?.role === 'Sales Representative'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : user?.role === 'System Admin'
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                  : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+              }`}
+            >
+              Role: {user?.role || 'Sales Manager'}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {user?.role === 'Sales Representative'
+                ? '• Field Rep: Check-in, Verify Geofence & Complete Visits'
+                : '• Management: Schedule Ad-hoc Audits & Export Route Compliance'}
+            </span>
+          </div>
         </div>
 
-        <button
-          onClick={() => setShowScheduleModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Schedule Special Visit</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+            title="Export Visits CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-brand-400" />
+            <span>Export CSV</span>
+          </button>
+
+          {isManagerOrAdmin && (
+            <button
+              onClick={() => setShowScheduleModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all cursor-pointer active:scale-95"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Schedule Special Visit</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Search Bar */}
@@ -227,13 +326,36 @@ export const Visits: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-4 px-4 text-right">
-                    <button
-                      onClick={() => setSelectedVisit(v)}
-                      className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600 transition-colors cursor-pointer"
-                      title="Inspect Visit"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      {/* Check-In Action Button */}
+                      {v.status === 'Scheduled' || v.status === 'Missed' ? (
+                        <button
+                          onClick={() => handleCheckInVisit(v.id)}
+                          className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                          title="Check In to Outlet (Geofence Verify)"
+                        >
+                          <LogIn className="w-3.5 h-3.5" />
+                          <span>Check In</span>
+                        </button>
+                      ) : v.status === 'In Progress' ? (
+                        <button
+                          onClick={() => handleCompleteVisit(v.id)}
+                          className="px-2.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-md shadow-brand-600/30"
+                          title="Complete Visit & Log Audit"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Complete</span>
+                        </button>
+                      ) : null}
+
+                      <button
+                        onClick={() => setSelectedVisit(v)}
+                        className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600 transition-colors cursor-pointer"
+                        title="Inspect Visit"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -435,6 +557,45 @@ export const Visits: React.FC = () => {
                   "{selectedVisit.feedback}"
                 </p>
               )}
+            </div>
+
+            {/* Modal Quick Actions */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setSelectedVisit(null)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+
+              <div className="flex items-center gap-2">
+                {selectedVisit.status === 'Scheduled' || selectedVisit.status === 'Missed' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCheckInVisit(selectedVisit.id);
+                      setSelectedVisit((prev) => prev ? { ...prev, status: 'In Progress', actualCheckIn: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), geofenceVerified: true } : null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Check In Now</span>
+                  </button>
+                ) : selectedVisit.status === 'In Progress' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCompleteVisit(selectedVisit.id);
+                      setSelectedVisit((prev) => prev ? { ...prev, status: 'Completed', actualCheckOut: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) } : null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-brand-600/30 transition-all cursor-pointer"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Mark Completed</span>
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>

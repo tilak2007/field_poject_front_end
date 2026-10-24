@@ -18,14 +18,21 @@ import {
   Star,
   CheckCircle2,
   User,
+  Download,
+  Ban,
+  Trash2,
 } from 'lucide-react';
 import { mockRetailers, mockVisits, mockOrders } from '../data/mockData';
 import { retailersApi } from '../api/retailersApi';
 import type { Retailer } from '../types';
+import { useAuth } from '../context/AuthContext';
+import { exportToCsv } from '../utils/exportCsv';
 
 export const Retailers: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
 
   const [retailersList, setRetailersList] = useState<Retailer[]>(() => {
     const saved = localStorage.getItem('fieldassist_retailers');
@@ -168,6 +175,67 @@ export const Retailers: React.FC = () => {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  // Toggle Retailer Status (Active <-> Blocked)
+  const handleToggleStatus = (retailerId: string) => {
+    const target = retailersList.find((r) => r.id === retailerId);
+    if (!target) return;
+    const nextStatus: 'Active' | 'Blocked' = target.status === 'Active' ? 'Blocked' : 'Active';
+
+    const updated: Retailer[] = retailersList.map((r) =>
+      r.id === retailerId ? { ...r, status: nextStatus } : r
+    );
+    setRetailersList(updated);
+    localStorage.setItem('fieldassist_retailers', JSON.stringify(updated));
+
+    if (selectedRetailer && selectedRetailer.id === retailerId) {
+      setSelectedRetailer({ ...selectedRetailer, status: nextStatus });
+    }
+
+    setToastMessage(`Outlet "${target.name}" status updated to ${nextStatus}!`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Delete Retailer
+  const handleDeleteRetailer = (retailerId: string) => {
+    const target = retailersList.find((r) => r.id === retailerId);
+    if (!window.confirm(`Are you sure you want to remove retailer "${target?.name || retailerId}" from territory records?`)) {
+      return;
+    }
+
+    const updated = retailersList.filter((r) => r.id !== retailerId);
+    setRetailersList(updated);
+    localStorage.setItem('fieldassist_retailers', JSON.stringify(updated));
+
+    if (selectedRetailer && selectedRetailer.id === retailerId) {
+      setSelectedRetailer(null);
+    }
+
+    setToastMessage(`Retail outlet removed successfully from database.`);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // Export Outlets CSV
+  const handleExportCsv = () => {
+    exportToCsv(
+      `fieldassist_retailers_${new Date().toISOString().split('T')[0]}`,
+      filteredRetailers,
+      [
+        { header: 'Outlet Code', key: 'code' },
+        { header: 'Retailer Name', key: 'name' },
+        { header: 'Owner Name', key: 'ownerName' },
+        { header: 'Outlet Type', key: 'type' },
+        { header: 'Contact Phone', key: 'phone' },
+        { header: 'Address', key: 'address' },
+        { header: 'Territory', key: 'territory' },
+        { header: 'City', key: 'city' },
+        { header: 'Assigned Sales Rep', key: 'assignedRepName' },
+        { header: 'Outstanding Balance (INR)', key: (r) => `₹${r.outstandingBalance.toLocaleString('en-IN')}` },
+        { header: 'Credit Limit (INR)', key: (r) => `₹${r.creditLimit.toLocaleString('en-IN')}` },
+        { header: 'Status', key: 'status' },
+      ]
+    );
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -208,15 +276,44 @@ export const Retailers: React.FC = () => {
           <p className="text-slate-400 text-xs mt-1">
             Search, filter, and audit Kirana stores, supermarkets, pharmacies, credit balances, and order histories.
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                user?.role === 'Sales Representative'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : user?.role === 'System Admin'
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                  : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+              }`}
+            >
+              Role: {user?.role || 'Sales Manager'}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {user?.role === 'Sales Representative'
+                ? '• Field Rep: Onboard New Outlets & Log Visit Audits'
+                : '• Management: Full Authority to Block, Delete & Modify Credit Limits'}
+            </span>
+          </div>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New Retail Outlet</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+            title="Export Retailers CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-brand-400" />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={handleOpenAddModal}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all cursor-pointer active:scale-95"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New Retail Outlet</span>
+          </button>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -353,15 +450,43 @@ export const Retailers: React.FC = () => {
                     </span>
                   </td>
 
-                  {/* Actions: View Details */}
+                  {/* Actions: View Details, Toggle Status, Remove */}
                   <td className="py-4 px-4 text-right">
-                    <button
-                      onClick={() => handleOpenDetails(r)}
-                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5 shadow-sm"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>View Details</span>
-                    </button>
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => handleOpenDetails(r)}
+                        className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Details</span>
+                      </button>
+
+                      {/* Management Action: Toggle Status */}
+                      {isManagerOrAdmin && (
+                        <button
+                          onClick={() => handleToggleStatus(r.id)}
+                          className={`p-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                            r.status === 'Active'
+                              ? 'bg-rose-500/10 text-rose-400 hover:bg-rose-600 hover:text-white border-rose-500/20'
+                              : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-600 hover:text-white border-emerald-500/20'
+                          }`}
+                          title={r.status === 'Active' ? 'Block Retailer' : 'Activate Retailer'}
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Management Action: Delete */}
+                      {isManagerOrAdmin && (
+                        <button
+                          onClick={() => handleDeleteRetailer(r.id)}
+                          className="p-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-600 text-slate-400 hover:text-white border border-slate-700/50 transition-all cursor-pointer"
+                          title="Remove Retailer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -617,6 +742,57 @@ export const Retailers: React.FC = () => {
                 )}
               </div>
             )}
+
+            {/* Quick Actions Footer inside Modal */}
+            <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseDetails();
+                    navigate('/orders');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                >
+                  <ShoppingCart className="w-3.5 h-3.5" />
+                  <span>Book Order for Store</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseDetails();
+                    navigate('/visits');
+                  }}
+                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span>Schedule Beat Visit</span>
+                </button>
+              </div>
+
+              {isManagerOrAdmin && (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleStatus(selectedRetailer.id)}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                      selectedRetailer.status === 'Active'
+                        ? 'bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-600 hover:text-white'
+                        : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-600 hover:text-white'
+                    }`}
+                  >
+                    {selectedRetailer.status === 'Active' ? 'Block Account' : 'Activate Account'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRetailer(selectedRetailer.id)}
+                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Remove Outlet
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

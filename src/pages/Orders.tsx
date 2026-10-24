@@ -13,12 +13,16 @@ import {
   RefreshCw,
   Minus,
   Ban,
+  Download,
+  Truck,
+  Printer,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { mockOrders, mockProducts, mockRetailers } from '../data/mockData';
 import type { Order, OrderItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ordersApi, productsApi } from '../api';
+import { exportToCsv } from '../utils/exportCsv';
 
 interface ActiveProduct {
   id: string;
@@ -310,6 +314,64 @@ export const Orders: React.FC = () => {
     }
   };
 
+  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
+
+  // 3. Click "Approve Order" button (Managers / Admins)
+  const handleApproveOrder = async (orderId: string) => {
+    try {
+      setOrders((prev) =>
+        prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: 'Approved' } : ord))
+      );
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, orderStatus: 'Approved' });
+      }
+      setOrderFeedback({
+        type: 'success',
+        message: 'Order verified and approved for distributor fulfillment!',
+      });
+    } catch (err: any) {
+      console.error('Approve order error:', err);
+    }
+  };
+
+  // 4. Click "Mark as Delivered" button (Managers / Admins)
+  const handleMarkDelivered = async (orderId: string) => {
+    try {
+      setOrders((prev) =>
+        prev.map((ord) => (ord.id === orderId ? { ...ord, orderStatus: 'Delivered', paymentStatus: 'Paid' } : ord))
+      );
+      if (selectedOrder && selectedOrder.id === orderId) {
+        setSelectedOrder({ ...selectedOrder, orderStatus: 'Delivered', paymentStatus: 'Paid' });
+      }
+      setOrderFeedback({
+        type: 'success',
+        message: 'Order marked as Delivered and payment registered as Paid!',
+      });
+    } catch (err: any) {
+      console.error('Mark delivered error:', err);
+    }
+  };
+
+  // 5. Export Orders CSV
+  const handleExportCsv = () => {
+    exportToCsv(
+      `fieldassist_orders_${new Date().toISOString().split('T')[0]}`,
+      filteredOrders,
+      [
+        { header: 'Order Number', key: 'orderNumber' },
+        { header: 'Order Date', key: 'date' },
+        { header: 'Retail Outlet', key: 'retailerName' },
+        { header: 'Distributor Partner', key: 'distributorName' },
+        { header: 'Booked By Rep', key: 'repName' },
+        { header: 'Total Amount (INR)', key: (o) => `₹${o.totalAmount.toLocaleString('en-IN')}` },
+        { header: 'Payment Status', key: 'paymentStatus' },
+        { header: 'Order Status', key: 'orderStatus' },
+        { header: 'Estimated Delivery', key: (o) => o.deliveryDateEstimated || 'Pending' },
+        { header: 'Total Line Items', key: (o) => (o.items ? o.items.length : 0) },
+      ]
+    );
+  };
+
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
       o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -336,12 +398,39 @@ export const Orders: React.FC = () => {
           <p className="text-slate-400 text-xs mt-1">
             Real-time orders booked on-site by field reps during retailer visits with atomic stock validation.
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                user?.role === 'Sales Representative'
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : user?.role === 'System Admin'
+                  ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
+                  : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+              }`}
+            >
+              Role: {user?.role || 'Sales Manager'}
+            </span>
+            <span className="text-[11px] text-slate-400">
+              {user?.role === 'Sales Representative'
+                ? '• Field Rep: Book Orders & View Invoices'
+                : '• Management: Full Order Approval & Inventory Override'}
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 self-start sm:self-auto">
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={handleExportCsv}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+            title="Export Orders CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-brand-400" />
+            <span>Export CSV</span>
+          </button>
+
           <button
             onClick={fetchOrders}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all"
+            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
             title="Refresh Orders"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -350,7 +439,7 @@ export const Orders: React.FC = () => {
 
           <button
             onClick={openOrderModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[42px]"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 min-h-[42px] cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Book Manual Order</span>
@@ -471,16 +560,39 @@ export const Orders: React.FC = () => {
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => setSelectedOrder(ord)}
-                        className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600 transition-colors"
+                        className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600 transition-colors cursor-pointer"
                         title="View Invoice"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
 
-                      {ord.orderStatus !== 'Cancelled' && (
+                      {/* Management Action: Approve Processing Order */}
+                      {isManagerOrAdmin && ord.orderStatus === 'Processing' && (
+                        <button
+                          onClick={() => handleApproveOrder(ord.id)}
+                          className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 hover:text-white hover:bg-emerald-600 border border-emerald-500/30 transition-colors cursor-pointer"
+                          title="Approve Order (Manager Authorization)"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {/* Management Action: Mark Approved Order as Delivered */}
+                      {isManagerOrAdmin && ord.orderStatus === 'Approved' && (
+                        <button
+                          onClick={() => handleMarkDelivered(ord.id)}
+                          className="p-2 rounded-xl bg-blue-500/10 text-blue-400 hover:text-white hover:bg-blue-600 border border-blue-500/30 transition-colors cursor-pointer"
+                          title="Confirm Delivery & Mark Paid"
+                        >
+                          <Truck className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {/* Cancel Order: Managers can cancel any, Reps can cancel unapproved orders */}
+                      {ord.orderStatus !== 'Cancelled' && ord.orderStatus !== 'Delivered' && (isManagerOrAdmin || ord.orderStatus === 'Processing') && (
                         <button
                           onClick={() => handleCancelOrder(ord.id)}
-                          className="p-2 rounded-xl bg-slate-800/80 text-rose-400 hover:text-white hover:bg-rose-600 transition-colors"
+                          className="p-2 rounded-xl bg-slate-800/80 text-rose-400 hover:text-white hover:bg-rose-600 transition-colors cursor-pointer"
                           title="Cancel Order (Restore Stock)"
                         >
                           <Ban className="w-4 h-4" />
@@ -755,27 +867,72 @@ export const Orders: React.FC = () => {
               </span>
             </div>
 
-            {/* Cancel Order Action */}
-            {selectedOrder.orderStatus !== 'Cancelled' && (
-              <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <span className="text-[11px] text-slate-400">
-                  Cancelling will restore warehouse inventory automatically.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCancelOrder(selectedOrder.id)}
-                  disabled={isCancelling}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-100 disabled:opacity-50"
-                >
-                  {isCancelling ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Ban className="w-3.5 h-3.5" />
-                  )}
-                  <span>Cancel Order (cancel_order_atomic)</span>
-                </button>
+            {/* Management & Invoice Actions */}
+            <div className="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  if (selectedOrder) {
+                    exportToCsv(
+                      `Invoice_${selectedOrder.orderNumber}`,
+                      selectedOrder.items || [],
+                      [
+                        { header: 'Order Number', key: () => selectedOrder.orderNumber },
+                        { header: 'Retailer', key: () => selectedOrder.retailerName },
+                        { header: 'Product Name', key: 'productName' },
+                        { header: 'Cases', key: 'quantityCases' },
+                        { header: 'Unit Price (INR)', key: 'unitPrice' },
+                        { header: 'Total (INR)', key: 'totalPrice' },
+                      ]
+                    );
+                  }
+                }}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Printer className="w-3.5 h-3.5 text-brand-400" />
+                <span>Export Invoice</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                {isManagerOrAdmin && selectedOrder.orderStatus === 'Processing' && (
+                  <button
+                    type="button"
+                    onClick={() => handleApproveOrder(selectedOrder.id)}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-emerald-600/30"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Approve Order</span>
+                  </button>
+                )}
+
+                {isManagerOrAdmin && selectedOrder.orderStatus === 'Approved' && (
+                  <button
+                    type="button"
+                    onClick={() => handleMarkDelivered(selectedOrder.id)}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-lg shadow-blue-600/30"
+                  >
+                    <Truck className="w-3.5 h-3.5" />
+                    <span>Mark Delivered</span>
+                  </button>
+                )}
+
+                {selectedOrder.orderStatus !== 'Cancelled' && (
+                  <button
+                    type="button"
+                    onClick={() => handleCancelOrder(selectedOrder.id)}
+                    disabled={isCancelling}
+                    className="px-3.5 py-2 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {isCancelling ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Ban className="w-3.5 h-3.5" />
+                    )}
+                    <span>Cancel Order</span>
+                  </button>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}

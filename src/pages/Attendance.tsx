@@ -10,10 +10,12 @@ import {
   Timer,
   RefreshCw,
   Compass,
+  Download,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { mockAttendanceRecords } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
+import { exportToCsv } from '../utils/exportCsv';
 
 interface AttendanceRecord {
   id?: string;
@@ -491,11 +493,37 @@ export const Attendance: React.FC = () => {
 
       {/* Attendance History Table */}
       <div className="glass-panel rounded-2xl overflow-hidden border border-slate-800">
-        <div className="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-          <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Territory Attendance Records
-          </h3>
-          <span className="text-[11px] text-slate-500">Live Supabase Sync</span>
+        <div className="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
+          <div>
+            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              Territory Attendance Records
+            </h3>
+            <span className="text-[11px] text-slate-500">Live Field Force Logs</span>
+          </div>
+
+          <button
+            onClick={() => {
+              exportToCsv(
+                `fieldassist_attendance_${new Date().toISOString().split('T')[0]}`,
+                mockAttendanceRecords,
+                [
+                  { header: 'Representative Name', key: (a) => a.repName },
+                  { header: 'Work Date', key: (a) => a.date },
+                  { header: 'Check In Time', key: (a) => a.checkInTime },
+                  { header: 'Check Out Time', key: (a) => a.checkOutTime || 'Active' },
+                  { header: 'Start Location', key: (a) => a.startLocation },
+                  { header: 'Hours Worked', key: (a) => a.workingHours },
+                  { header: 'Battery Level', key: (a) => `${a.batteryPctAtCheckIn ?? 90}%` },
+                  { header: 'Status', key: (a) => a.status },
+                ]
+              );
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+            title="Export Attendance Logs CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-brand-400" />
+            <span>Export CSV</span>
+          </button>
         </div>
 
         <div className="overflow-x-auto">
