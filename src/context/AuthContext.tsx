@@ -9,8 +9,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  signUp: (data: SignUpData) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<User>;
+  signUp: (data: SignUpData) => Promise<User>;
   logout: () => Promise<void>;
   hasRole: (role: UserRole | UserRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
@@ -111,7 +111,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<User> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -120,6 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(response.token);
       localStorage.setItem('fieldassist_user_profile', JSON.stringify(response.user));
       localStorage.setItem('fieldassist_auth_token', response.token);
+      return response.user;
     } catch (err: any) {
       setError(err.message || 'Authentication failed. Please verify your credentials.');
       throw err;
@@ -128,7 +129,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (data: SignUpData) => {
+  const signUp = async (data: SignUpData): Promise<User> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -137,6 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(response.token);
       localStorage.setItem('fieldassist_user_profile', JSON.stringify(response.user));
       localStorage.setItem('fieldassist_auth_token', response.token);
+      return response.user;
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please check your information.');
       throw err;
