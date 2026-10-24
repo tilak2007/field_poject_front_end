@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791528900379,
+      "tag": "0000_initial_core_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791528914432,
+      "tag": "0001_lock_down_function_execute",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791557873338,
+      "tag": "0002_products_inventory",
+      "breakpoints": true
+    }
+  ]
+}

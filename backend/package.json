@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3"
+  },
+  "devDependencies": {
+    "drizzle-kit": "0.x",
+    "drizzle-orm": "0.x",
+    "postgres": "^3.4.9"
+  },
+  "scripts": {
+    "dev": "bun scripts/dev-server.ts",
+    "build": "echo backend-only"
+  }
+}
