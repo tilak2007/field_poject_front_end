@@ -260,12 +260,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400">
                     <Server className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Supabase Connected</span>
+                    <span>Cloud Connected</span>
                   </div>
-                  <span className="text-[9px] font-mono text-emerald-400 font-bold">LIVE DB</span>
+                  <span className="text-[9px] font-mono text-emerald-400 font-bold">ONLINE</span>
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  baqelrnhnrsdnubasepq.supabase.co
+                <p className="text-[10px] text-slate-400 font-mono">
+                  api.fieldassist.io (Enterprise)
                 </p>
               </div>
 
