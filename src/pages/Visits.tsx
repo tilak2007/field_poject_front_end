@@ -61,7 +61,18 @@ export const Visits: React.FC = () => {
   const [plannedTime, setPlannedTime] = useState('Today, 02:30 PM');
   const [visitNotes, setVisitNotes] = useState('');
 
-  const filteredVisits = visitsList.filter(
+  const isRep = user?.role === 'Sales Representative';
+  const visibleVisits = isRep
+    ? visitsList.filter(
+        (v) =>
+          v.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
+          v.repName.toLowerCase().includes('vikram') ||
+          v.repId === user?.id ||
+          v.repId === 'rep-1'
+      )
+    : visitsList;
+
+  const filteredVisits = visibleVisits.filter(
     (v) =>
       v.retailerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       v.repName.toLowerCase().includes(searchTerm.toLowerCase()) ||

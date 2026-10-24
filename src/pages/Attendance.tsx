@@ -239,6 +239,16 @@ export const Attendance: React.FC = () => {
   const isCheckedIn = Boolean(todayAttendance?.check_in_time);
   const isCheckedOut = Boolean(todayAttendance?.check_out_time);
 
+  const isRep = user?.role === 'Sales Representative';
+  const visibleAttendanceRecords = isRep
+    ? mockAttendanceRecords.filter(
+        (a) =>
+          a.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
+          a.repId === user?.id ||
+          a.repId === 'rep-1'
+      )
+    : mockAttendanceRecords;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -496,16 +506,18 @@ export const Attendance: React.FC = () => {
         <div className="p-4 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-              Territory Attendance Records
+              {isRep ? 'My Attendance Records' : 'Territory Attendance Records'}
             </h3>
-            <span className="text-[11px] text-slate-500">Live Field Force Logs</span>
+            <span className="text-[11px] text-slate-500">
+              {isRep ? `Confidential shift logs for ${user?.territory || 'North Delhi Beat A'}` : 'Live Field Force Logs'}
+            </span>
           </div>
 
           <button
             onClick={() => {
               exportToCsv(
                 `fieldassist_attendance_${new Date().toISOString().split('T')[0]}`,
-                mockAttendanceRecords,
+                visibleAttendanceRecords,
                 [
                   { header: 'Representative Name', key: (a) => a.repName },
                   { header: 'Work Date', key: (a) => a.date },
@@ -575,7 +587,7 @@ export const Attendance: React.FC = () => {
                 </tr>
               )}
 
-              {mockAttendanceRecords.map((att) => (
+              {visibleAttendanceRecords.map((att) => (
                 <tr key={att.id} className="hover:bg-slate-900/60 transition-colors">
                   <td className="py-4 px-4 font-bold text-white text-sm">{att.repName}</td>
                   <td className="py-4 px-4 text-slate-300 font-mono">{att.date}</td>

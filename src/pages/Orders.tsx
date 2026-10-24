@@ -372,7 +372,19 @@ export const Orders: React.FC = () => {
     );
   };
 
-  const filteredOrders = orders.filter((o) => {
+  const isRep = user?.role === 'Sales Representative';
+  const visibleOrders = isRep
+    ? orders.filter(
+        (o) =>
+          o.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
+          o.repName.toLowerCase().includes('vikram') ||
+          o.repId === user?.id ||
+          o.repId === 'rep-1' ||
+          o.repId === 'rep-01'
+      )
+    : orders;
+
+  const filteredOrders = visibleOrders.filter((o) => {
     const matchesSearch =
       o.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.retailerName.toLowerCase().includes(searchTerm.toLowerCase()) ||

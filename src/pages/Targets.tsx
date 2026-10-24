@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin, Download } from 'lucide-react';
+import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin, Download, ShieldAlert } from 'lucide-react';
 import { mockTargets } from '../data/mockData';
 import type { Target } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,8 @@ import { exportToCsv } from '../utils/exportCsv';
 
 export const Targets: React.FC = () => {
   const { user } = useAuth();
-  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
+  const isRep = user?.role === 'Sales Representative';
+  const isManagerOrAdmin = !isRep;
 
   const [targetsList, setTargetsList] = useState<Target[]>(() => {
     const saved = localStorage.getItem('fieldassist_targets');
@@ -33,7 +34,39 @@ export const Targets: React.FC = () => {
   const [visitsTargetCount, setVisitsTargetCount] = useState<number>(160);
   const [newOutletsTargetCount, setNewOutletsTargetCount] = useState<number>(15);
 
+  const repMatchedTargets = targetsList.filter(
+    (t) =>
+      t.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
+      t.repId === user?.id ||
+      t.repId === 'rep-1'
+  );
+
+  // Sales Rep can ONLY see their own personal target. No comparisons or other reps' metrics.
+  const visibleTargets: Target[] = isRep
+    ? repMatchedTargets.length > 0
+      ? [repMatchedTargets[0]]
+      : [
+          {
+            id: 'tgt-personal',
+            repId: user?.id || 'rep-1',
+            repName: user?.name || 'Vikram Sharma',
+            monthYear: 'October 2026',
+            salesTargetAmount: 500000,
+            salesAchievedAmount: 422500,
+            visitsTargetCount: 150,
+            visitsAchievedCount: 128,
+            newOutletsTargetCount: 12,
+            newOutletsAchievedCount: 10,
+            status: 'On Track',
+          },
+        ]
+    : targetsList;
+
   const handleOpenAllocateModal = () => {
+    if (!isManagerOrAdmin) {
+      alert('Only Area Sales Managers have authorization to allocate monthly targets.');
+      return;
+    }
     setSalesTargetAmount(1800000);
     setVisitsTargetCount(160);
     setNewOutletsTargetCount(15);
@@ -69,7 +102,7 @@ export const Targets: React.FC = () => {
   const handleExportCsv = () => {
     exportToCsv(
       `fieldassist_targets_${new Date().toISOString().split('T')[0]}`,
-      targetsList,
+      visibleTargets,
       [
         { header: 'Representative', key: 'repName' },
         { header: 'Month / Cycle', key: 'monthYear' },
@@ -167,9 +200,27 @@ export const Targets: React.FC = () => {
         </div>
       </div>
 
+      {/* Policy Notice for Sales Reps */}
+      {isRep && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0" />
+            <div>
+              <span className="font-bold">Managerial Target Assignment Only: </span>
+              <span>
+                Monthly sales quotas and territory targets are established and assigned exclusively by your Area Sales Manager. As a Sales Representative, you cannot allocate, edit, or adjust quotas.
+              </span>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 font-mono text-[10px] font-bold shrink-0">
+            VIEW ONLY • REVENUE QUOTA
+          </span>
+        </div>
+      )}
+
       {/* Target Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {targetsList.map((tgt) => {
+        {visibleTargets.map((tgt) => {
           const salesPct =
             tgt.salesTargetAmount > 0
               ? Math.round((tgt.salesAchievedAmount / tgt.salesTargetAmount) * 100)
@@ -196,8 +247,21 @@ export const Targets: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white">{tgt.repName}</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Sales Quota Fulfillment</p>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <span>{tgt.repName}</span>
+                  {isRep && (
+                    <span className="px-2 py-0.5 rounded text-[10px] bg-brand-500/20 text-brand-300 font-normal">
+                      Your Assigned Quota
+                    </span>
+                  )}
+                </h3>
+                <p className="text-xs text-brand-400 mt-0.5 font-medium flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span>Allocated Area: {user?.territory || 'North Delhi (Sector 14 & 18)'}</span>
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Assigned by: <strong className="text-slate-200">Area Sales Manager</strong>
+                </p>
               </div>
 
               {/* Progress bar */}

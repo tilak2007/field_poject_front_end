@@ -139,15 +139,25 @@ export const LiveTracking: React.FC = () => {
     };
   }, []);
 
-  const reps = fleetData?.reps || [];
+  const allReps = fleetData?.reps || [];
+  const isRep = user?.role === 'Sales Representative';
+  // Sales Rep privacy isolation: a rep only tracks their own device and assigned beat
+  const reps = isRep
+    ? allReps.filter(
+        (r) =>
+          r.name.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
+          r.id === user?.id ||
+          r.id === 'rep-1'
+      )
+    : allReps;
   const geofencedOutlets = fleetData?.geofencedOutlets || [];
   const summary = fleetData?.fleetSummary || {
-    totalReps: reps.length,
+    totalReps: isRep ? 1 : reps.length,
     moving: reps.filter((r) => r.status === 'Moving').length,
     atStore: reps.filter((r) => r.status === 'At Store').length,
     idle: reps.filter((r) => r.status === 'Idle').length,
     geofencesActive: geofencedOutlets.length,
-    averageFleetBattery: 78,
+    averageFleetBattery: reps[0]?.batteryLevel || 78,
   };
 
   const filteredReps = reps.filter((r) => {
@@ -159,7 +169,7 @@ export const LiveTracking: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const selectedRep = reps.find((r) => r.id === selectedRepId) || reps[0];
+  const selectedRep = reps.find((r) => r.id === selectedRepId) || reps[0] || allReps[0];
 
   return (
     <motion.div
@@ -177,14 +187,18 @@ export const LiveTracking: React.FC = () => {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black text-white tracking-tight">Live GPS Fleet Radar</h1>
+                <h1 className="text-2xl font-black text-white tracking-tight">
+                  {isRep ? 'My Live GPS Radar' : 'Live GPS Fleet Radar'}
+                </h1>
                 <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold tracking-wide">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                  LIVE TELEMETRY
+                  {isRep ? 'PERSONAL TELEMETRY' : 'LIVE TELEMETRY'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
-                Real-time satellite positioning, speed telemetry, automated geofence entry/exit detection, and breadcrumb route tracking.
+                {isRep
+                  ? `Real-time satellite positioning and route tracking for ${user?.name || 'Vikram Sharma'} (${user?.territory || 'North Delhi Beat A'}). Confidential sales rep tracking.`
+                  : 'Real-time satellite positioning, speed telemetry, automated geofence entry/exit detection, and breadcrumb route tracking.'}
               </p>
             </div>
           </div>
