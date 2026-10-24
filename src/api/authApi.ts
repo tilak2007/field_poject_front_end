@@ -2,7 +2,37 @@ import type { User, AuthResponse, LoginCredentials, SignUpData, UserRole } from 
 import { supabase } from '../lib/supabase';
 import { setAuthToken, removeAuthToken, simulateNetworkDelay } from './client';
 
-export const DEMO_ACCOUNTS: Record<string, { user: User; password: string }> = {
+export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }> = {
+  'vinaymeghu09@gmail.com': {
+    user: {
+      id: 'usr-vinay-01',
+      name: 'Vinayaka Tilak',
+      email: 'vinaymeghu09@gmail.com',
+      role: 'System Admin',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      territory: 'National HQ',
+      region: 'All India Zones',
+      phone: '+91 98110 00001',
+      department: 'Executive Administration',
+      permissions: ['all', 'read:all', 'write:all', 'delete:all', 'admin:system', 'manage:targets', 'manage:reps'],
+    },
+    password: 'vinay123',
+  },
+  'tilak2007@gmail.com': {
+    user: {
+      id: 'usr-tilak-02',
+      name: 'Tilak P.S.',
+      email: 'tilak2007@gmail.com',
+      role: 'Sales Manager',
+      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
+      territory: 'North Delhi',
+      region: 'North Zone (Delhi-NCR)',
+      phone: '+91 98110 00002',
+      department: 'Regional Sales Management',
+      permissions: ['read:all', 'write:orders', 'write:retailers', 'manage:targets', 'manage:reps', 'view:analytics'],
+    },
+    password: 'tilak123',
+  },
   'admin@fieldassist.io': {
     user: {
       id: 'usr-admin-01',
@@ -51,31 +81,55 @@ export const DEMO_ACCOUNTS: Record<string, { user: User; password: string }> = {
   },
 };
 
+// Retrieve permanent accounts database from persistent local storage
+function getAccountsRegistry(): Record<string, { user: User; password: string }> {
+  try {
+    const stored = localStorage.getItem('fieldassist_accounts_registry');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return { ...PERMANENT_ACCOUNTS, ...parsed };
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return { ...PERMANENT_ACCOUNTS };
+}
+
+// Save account into permanent registry
+function saveAccountToRegistry(email: string, user: User, password: string): void {
+  try {
+    const current = getAccountsRegistry();
+    current[email.toLowerCase().trim()] = { user, password };
+    localStorage.setItem('fieldassist_accounts_registry', JSON.stringify(current));
+  } catch (err) {
+    console.warn('Error saving to accounts registry:', err);
+  }
+}
+
 export const authApi = {
   /**
-   * Authenticate identity against backend (Supabase Auth / Verified Accounts) and fetch authorized role
+   * Authenticate permanent credentials against registry and Supabase
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const email = credentials.email.toLowerCase().trim();
     const password = credentials.password || '';
 
     if (!email || !password) {
-      throw { message: 'Please enter both your work email and password.', status: 400 };
+      throw { message: 'Please enter both your email and password.', status: 400 };
     }
 
-    // 1. Backend Authentication via Supabase Auth
+    // 1. Try Supabase Auth if online
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (!error && data.session) {
+      if (!error && data.session && data.user) {
         const supaUser = data.user;
         const token = data.session.access_token;
         setAuthToken(token);
 
-        // Fetch verified role from backend database table `user_profiles`
         let profile: any = null;
         try {
           const { data: profData } = await supabase
@@ -93,7 +147,7 @@ export const authApi = {
 
         const userObj: User = {
           id: supaUser.id,
-          name: profile?.full_name || supaUser.user_metadata?.full_name || email.split('@')[0].toUpperCase(),
+          name: profile?.full_name || supaUser.user_metadata?.full_name || email.split('@')[0],
           email: supaUser.email || email,
           role,
           avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
@@ -105,91 +159,84 @@ export const authApi = {
 
         localStorage.setItem('fieldassist_user_profile', JSON.stringify(userObj));
         localStorage.setItem('fieldassist_auth_token', token);
+        saveAccountToRegistry(email, userObj, password);
         return { user: userObj, token, expiresIn: data.session.expires_in };
       }
-
-      // If email is not confirmed, gracefully bypass and authenticate user immediately
-      if (error && error.message?.toLowerCase().includes('email not confirmed')) {
-        const role: UserRole = email.includes('admin') ? 'System Admin' : email.includes('manager') ? 'Sales Manager' : 'Sales Representative';
-        const userObj: User = {
-          id: `usr-bypass-${Date.now()}`,
-          name: email.split('@')[0].toUpperCase(),
-          email,
-          role,
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-          territory: 'North Delhi',
-          region: 'North Zone (Delhi-NCR)',
-          department: 'Field Force Operations',
-          permissions: role === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
-        };
-        const token = `sb-bypass-${Date.now()}`;
-        setAuthToken(token);
-        localStorage.setItem('fieldassist_user_profile', JSON.stringify(userObj));
-        localStorage.setItem('fieldassist_auth_token', token);
-        return { user: userObj, token, expiresIn: 86400 };
-      }
-    } catch (err) {
-      // Defer to credential verification below
+    } catch {
+      // Continue to local permanent registry check
     }
 
-    // 2. Validate against pre-configured system accounts
-    await simulateNetworkDelay(250);
-    const demoAcc = DEMO_ACCOUNTS[email];
+    // 2. Validate against permanent accounts registry
+    await simulateNetworkDelay(150);
+    const registry = getAccountsRegistry();
+    const account = registry[email];
 
-    if (demoAcc) {
-      if (password !== demoAcc.password) {
-        throw { message: 'Authentication failed. Invalid password for this account.', status: 401 };
-      }
-      const token = `sb-verified-jwt-${demoAcc.user.id}-${Date.now()}`;
-      setAuthToken(token);
-      localStorage.setItem('fieldassist_user_profile', JSON.stringify(demoAcc.user));
-      localStorage.setItem('fieldassist_auth_token', token);
-      return { user: demoAcc.user, token, expiresIn: 86400 };
+    if (!account) {
+      throw {
+        message: `No account registered with ${email}. Please check your email or click "Sign up" to create a permanent account.`,
+        status: 404,
+      };
     }
 
-    // 3. Resilient fallback for any custom user credentials:
-    // Create immediate active session so user is never locked out
-    const detectedRole: UserRole = email.includes('admin')
-      ? 'System Admin'
-      : email.includes('manager')
-      ? 'Sales Manager'
-      : 'Sales Representative';
+    if (password !== account.password) {
+      throw {
+        message: 'Invalid password. Please enter the correct password for this account.',
+        status: 401,
+      };
+    }
 
-    const fallbackUser: User = {
-      id: `usr-direct-${Date.now()}`,
-      name: email.split('@')[0].toUpperCase(),
-      email,
-      role: detectedRole,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      territory: 'North Delhi',
-      region: 'North Zone (Delhi-NCR)',
-      department: 'Field Sales Operations',
-      permissions: detectedRole === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
-    };
-    const directToken = `sb-direct-${fallbackUser.id}-${Date.now()}`;
-    setAuthToken(directToken);
-    localStorage.setItem('fieldassist_user_profile', JSON.stringify(fallbackUser));
-    localStorage.setItem('fieldassist_auth_token', directToken);
-    return { user: fallbackUser, token: directToken, expiresIn: 86400 };
+    // Permanent session token
+    const token = `fieldassist_perm_token_${account.user.id}_${Date.now()}`;
+    setAuthToken(token);
+    localStorage.setItem('fieldassist_user_profile', JSON.stringify(account.user));
+    localStorage.setItem('fieldassist_auth_token', token);
+
+    return { user: account.user, token, expiresIn: 31536000 };
   },
 
   /**
-   * Register a new user in Supabase Auth and initialize their role & profile
+   * Register a new permanent user account
    */
   async signUp(data: SignUpData): Promise<AuthResponse> {
     const email = data.email.toLowerCase().trim();
     const password = data.password;
 
     if (!email || !password || !data.fullName) {
-      throw { message: 'Please fill in all required fields.', status: 400 };
+      throw { message: 'Please fill in your name, work email, and password.', status: 400 };
     }
 
+    if (password.length < 6) {
+      throw { message: 'Password must be at least 6 characters long.', status: 400 };
+    }
+
+    // Check if account already exists
+    const registry = getAccountsRegistry();
+    if (registry[email]) {
+      throw {
+        message: `An account with ${email} is already registered. Please log in with your password.`,
+        status: 409,
+      };
+    }
+
+    // Create user object
+    const newUser: User = {
+      id: `usr-perm-${Date.now()}`,
+      name: data.fullName.trim(),
+      email,
+      role: data.role,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.fullName)}&background=0284c7&color=fff`,
+      territory: data.territory || 'North Delhi',
+      region: 'North Zone (Delhi-NCR)',
+      department: data.role === 'Sales Representative' ? 'Field Sales Force' : 'Field Sales Operations',
+      permissions: data.role === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
+    };
+
+    // Attempt Supabase sign up in background if online
     try {
-      const { data: supaAuthData, error } = await supabase.auth.signUp({
+      await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/login`,
           data: {
             full_name: data.fullName,
             role: data.role,
@@ -197,132 +244,46 @@ export const authApi = {
           },
         },
       });
-
-      if (error) {
-        throw { message: error.message, status: 400 };
-      }
-
-      if (supaAuthData.user) {
-        const supaUser = supaAuthData.user;
-        const token = supaAuthData.session?.access_token || `sb-token-${Date.now()}`;
-        setAuthToken(token);
-
-        // Try inserting profile record in user_profiles table
-        try {
-          await supabase.from('user_profiles').insert([
-            {
-              id: supaUser.id,
-              full_name: data.fullName,
-              email,
-              role: data.role,
-              territory: data.territory || 'North Delhi',
-              region: 'North Zone (Delhi-NCR)',
-              department: data.role === 'Sales Representative' ? 'Field Sales Force' : 'Sales Management',
-              avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-            },
-          ]);
-        } catch {
-          // Ignore
-        }
-
-        const newUser: User = {
-          id: supaUser.id,
-          name: data.fullName,
-          email,
-          role: data.role,
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-          territory: data.territory || 'North Delhi',
-          region: 'North Zone (Delhi-NCR)',
-          department: data.role === 'Sales Representative' ? 'Field Sales Force' : 'Sales Management',
-          permissions: data.role === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
-        };
-
-        localStorage.setItem('fieldassist_user_profile', JSON.stringify(newUser));
-        localStorage.setItem('fieldassist_auth_token', token);
-        return { user: newUser, token, expiresIn: 86400 };
-      }
-    } catch (err: any) {
-      if (err.status) throw err;
+    } catch {
+      // Continue with permanent local registration
     }
 
-    // Fallback new user registration
-    await simulateNetworkDelay(250);
-    const fallbackUser: User = {
-      id: `usr-reg-${Date.now()}`,
-      name: data.fullName,
-      email,
-      role: data.role,
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      territory: data.territory || 'North Delhi',
-      region: 'North Zone (Delhi-NCR)',
-      department: data.role === 'Sales Representative' ? 'Field Sales Force' : 'Sales Management',
-      permissions: data.role === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
-    };
-    const token = `sb-reg-jwt-${fallbackUser.id}-${Date.now()}`;
+    // Save into permanent registry
+    saveAccountToRegistry(email, newUser, password);
+
+    // Save permanent active session
+    const token = `fieldassist_perm_token_${newUser.id}_${Date.now()}`;
     setAuthToken(token);
-    localStorage.setItem('fieldassist_user_profile', JSON.stringify(fallbackUser));
+    localStorage.setItem('fieldassist_user_profile', JSON.stringify(newUser));
     localStorage.setItem('fieldassist_auth_token', token);
-    return { user: fallbackUser, token, expiresIn: 86400 };
+
+    return { user: newUser, token, expiresIn: 31536000 };
   },
 
   /**
-   * Get current session profile directly from backend Supabase Auth session
+   * Fetch current authenticated user from permanent session
    */
   async getCurrentUser(): Promise<User | null> {
     try {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user) {
-        const supaUser = data.session.user;
-        let profile: any = null;
-        try {
-          const { data: profData } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', supaUser.id)
-            .maybeSingle();
-          profile = profData;
-        } catch {
-          // Ignore profile query failure
-        }
-
-        const role: UserRole =
-          (profile?.role as UserRole) ||
-          (supaUser.user_metadata?.role as UserRole) ||
-          (supaUser.email?.toLowerCase().includes('admin') ? 'System Admin' : 'Sales Manager');
-
-        return {
-          id: supaUser.id,
-          name: profile?.full_name || supaUser.user_metadata?.full_name || supaUser.email?.split('@')[0] || 'Field User',
-          email: supaUser.email || '',
-          role,
-          avatar: profile?.avatar_url || supaUser.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-          territory: profile?.territory || supaUser.user_metadata?.territory || 'North Delhi',
-          region: profile?.region || 'North Zone (Delhi-NCR)',
-          department: profile?.department || (role === 'Sales Representative' ? 'Field Sales Force' : 'Field Sales Operations'),
-          permissions: role === 'System Admin' ? ['all'] : ['read:all', 'write:orders', 'write:visits'],
-        };
+      const stored = localStorage.getItem('fieldassist_user_profile');
+      if (stored) {
+        return JSON.parse(stored) as User;
       }
-    } catch (e) {
-      console.warn('getCurrentUser note:', e);
+    } catch {
+      // Ignore
     }
     return null;
   },
 
   /**
-   * Invalidate active authentication session
+   * Log out and terminate permanent session
    */
   async logout(): Promise<void> {
+    removeAuthToken();
+    localStorage.removeItem('fieldassist_user_profile');
+    localStorage.removeItem('fieldassist_auth_token');
     try {
       await supabase.auth.signOut();
-    } catch {
-      // Ignore
-    }
-    removeAuthToken();
-    try {
-      localStorage.removeItem('fieldassist_user_profile');
-      localStorage.removeItem('fieldassist_auth_token');
-      localStorage.removeItem('oauth_selected_role');
-      sessionStorage.removeItem('oauth_selected_role');
     } catch {
       // Ignore
     }
