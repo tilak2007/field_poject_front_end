@@ -14,7 +14,10 @@ import {
   LogOut,
   Shield,
   Server,
-  ChevronDown
+  ChevronDown,
+  Crown,
+  Briefcase,
+  Users,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -28,7 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedRegion,
   onRegionChange
 }) => {
-  const { user, logout } = useAuth();
+  const { user, logout, switchRole } = useAuth();
   const navigate = useNavigate();
 
   const [showNotifications, setShowNotifications] = useState(false);
@@ -269,6 +272,66 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </p>
               </div>
 
+              {/* Role-Based Authorization Switcher */}
+              <div className="pt-2 border-t border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Role-Based Access (RBAC)
+                  </span>
+                  <span className="text-[9px] text-brand-400 font-mono">Live Toggle</span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => switchRole('System Admin')}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                      user?.role === 'System Admin'
+                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Crown className="w-3.5 h-3.5 text-purple-400" />
+                      <span>System Admin</span>
+                    </span>
+                    <span className="text-[10px] opacity-75 font-normal">Full Control</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => switchRole('Sales Manager')}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                      user?.role === 'Sales Manager'
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/40'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Briefcase className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Sales Manager</span>
+                    </span>
+                    <span className="text-[10px] opacity-75 font-normal">Supervisory</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => switchRole('Sales Representative')}
+                    className={`w-full px-2.5 py-1.5 rounded-lg text-left text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+                      user?.role === 'Sales Representative'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Users className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Sales Representative</span>
+                    </span>
+                    <span className="text-[10px] opacity-75 font-normal">Field Rep</span>
+                  </button>
+                </div>
+              </div>
+
               <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
                 <button
                   onClick={() => {
@@ -278,7 +341,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="flex-1 py-2 text-center text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1.5 min-h-[40px]"
                 >
                   <Shield className="w-3.5 h-3.5" />
-                  <span>Switch Role</span>
+                  <span>Switch Account</span>
                 </button>
                 <button
                   onClick={handleLogout}

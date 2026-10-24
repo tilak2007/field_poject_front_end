@@ -41,13 +41,41 @@ export const App: React.FC = () => {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/dashboard" element={<Dashboard />} />
-            <Route path="/reps" element={<SalesReps />} />
-            <Route path="/reps/:id" element={<SalesReps />} />
+            <Route
+              path="/reps"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <SalesReps />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/reps/:id"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <SalesReps />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/retailers" element={<Retailers />} />
             <Route path="/retailers/:id" element={<Retailers />} />
-            <Route path="/distributors" element={<Distributors />} />
+            <Route
+              path="/distributors"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <Distributors />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/products" element={<Products />} />
-            <Route path="/inventory" element={<Inventory />} />
+            <Route
+              path="/inventory"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <Inventory />
+                </ProtectedRoute>
+              }
+            />
             <Route path="/orders" element={<Orders />} />
             <Route path="/beat-plans" element={<BeatPlans />} />
             <Route path="/beat-plan" element={<BeatPlanPage />} />
@@ -57,8 +85,15 @@ export const App: React.FC = () => {
             <Route path="/targets" element={<Targets />} />
             <Route path="/analytics" element={<Analytics />} />
             
-            {/* Reports */}
-            <Route path="/reports" element={<Reports />} />
+            {/* Reports - Restricted to System Admin and Sales Manager */}
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <Reports />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           {/* Fallback route */}

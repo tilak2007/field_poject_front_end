@@ -16,6 +16,7 @@ interface AuthContextType {
   hasPermission: (permission: string) => boolean;
   clearError: () => void;
   setUserSession: (user: User, token?: string) => void;
+  switchRole: (newRole: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -186,6 +187,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   };
 
+  const switchRole = (newRole: UserRole) => {
+    if (!user) return;
+    const permissions =
+      newRole === 'System Admin'
+        ? ['all', 'read:all', 'write:all', 'delete:all', 'admin:system', 'manage:targets', 'manage:reps']
+        : newRole === 'Sales Manager'
+        ? ['read:all', 'write:orders', 'write:retailers', 'manage:targets', 'manage:reps', 'view:analytics']
+        : ['read:own', 'write:visits', 'write:orders', 'punch:attendance'];
+
+    const updatedUser: User = {
+      ...user,
+      role: newRole,
+      permissions,
+      department:
+        newRole === 'System Admin'
+          ? 'Executive Administration'
+          : newRole === 'Sales Manager'
+          ? 'Regional Sales Management'
+          : 'Field Sales Force',
+    };
+
+    setUserSession(updatedUser, token || undefined);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -201,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hasPermission,
         clearError,
         setUserSession,
+        switchRole,
       }}
     >
       {children}

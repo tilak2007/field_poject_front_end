@@ -367,6 +367,70 @@ export const Login: React.FC = () => {
               </>
             )}
 
+            {/* Quick Role-Based Authentication Selector */}
+            {mode === 'login' && (
+              <div className="space-y-1.5 pb-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                    Role-Based Quick Access
+                  </span>
+                  <span className="text-[10px] text-brand-600 font-semibold">1-click fill</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin@fieldassist.io');
+                      setPassword('admin123');
+                      clearError();
+                    }}
+                    className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      email === 'admin@fieldassist.io'
+                        ? 'bg-purple-50 border-purple-400 text-purple-800 ring-1 ring-purple-400 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold text-slate-800">👑 Admin</div>
+                    <div className="text-[9px] text-slate-500 font-medium">System Admin</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('manager@fieldassist.io');
+                      setPassword('manager123');
+                      clearError();
+                    }}
+                    className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      email === 'manager@fieldassist.io'
+                        ? 'bg-blue-50 border-blue-400 text-blue-800 ring-1 ring-blue-400 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold text-slate-800">💼 Manager</div>
+                    <div className="text-[9px] text-slate-500 font-medium">Sales Manager</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('vikram@fieldassist.io');
+                      setPassword('rep123');
+                      clearError();
+                    }}
+                    className={`py-2 px-1.5 rounded-xl border text-center transition-all cursor-pointer ${
+                      email === 'vikram@fieldassist.io'
+                        ? 'bg-emerald-50 border-emerald-400 text-emerald-800 ring-1 ring-emerald-400 shadow-sm'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="text-[11px] font-bold text-slate-800">🏃 Rep</div>
+                    <div className="text-[9px] text-slate-500 font-medium">Field Force</div>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Email Input */}
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700">Work Email *</label>
