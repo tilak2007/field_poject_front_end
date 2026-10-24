@@ -4,6 +4,7 @@ import { Package, Search, Plus, RefreshCw, X, CheckCircle2, Tag, Layers, IndianR
 import { supabase } from '@/lib/supabaseClient';
 import { mockProducts } from '../data/mockData';
 import type { Product } from '../types';
+import { productsApi } from '../api';
 
 export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -41,39 +42,9 @@ export const Products: React.FC = () => {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const { data: supaProducts, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (!error && supaProducts && supaProducts.length > 0) {
-        // Map database record to Product interface
-        const mapped: Product[] = supaProducts.map((p) => {
-          const stock = Number(p.stock_cases ?? 100);
-          return {
-            id: p.id,
-            sku: p.sku,
-            name: p.name,
-            category: p.category as any,
-            unitPrice: Number(p.unit_price),
-            mrp: Number(p.mrp),
-            casePackSize: Number(p.case_size ?? 24),
-            stockInHandCases: stock,
-            reorderLevelCases: 30,
-            taxRatePct: 18,
-            imageUrl:
-              p.image_url ||
-              'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80',
-            status: stock > 30 ? 'In Stock' : stock > 0 ? 'Low Stock' : 'Out of Stock',
-          };
-        });
-
-        setProducts((prev) => {
-          const supaIds = new Set(mapped.map((m) => m.id));
-          const merged = [...mapped, ...prev.filter((p) => !supaIds.has(p.id))];
-          return merged;
-        });
+      const items = await productsApi.getProducts();
+      if (items && items.length > 0) {
+        setProducts(items);
       }
     } catch (err) {
       console.warn('Using catalog fallback:', err);

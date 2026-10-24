@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Truck, Building, Plus, X, ShieldCheck } from 'lucide-react';
 import { mockDistributors } from '../data/mockData';
 import type { Distributor } from '../types';
+import { distributorsApi } from '../api';
 
 export const Distributors: React.FC = () => {
   const [distributorsList, setDistributorsList] = useState<Distributor[]>(() => {
@@ -17,6 +18,14 @@ export const Distributors: React.FC = () => {
     }
     return mockDistributors;
   });
+
+  useEffect(() => {
+    distributorsApi.getDistributors().then((data) => {
+      if (data && data.length > 0) {
+        setDistributorsList(data);
+      }
+    }).catch(() => {});
+  }, []);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -59,6 +68,11 @@ export const Distributors: React.FC = () => {
     const updated = [newDist, ...distributorsList];
     setDistributorsList(updated);
     localStorage.setItem('fieldassist_distributors', JSON.stringify(updated));
+
+    // Persist to serverless backend API
+    distributorsApi.createDistributor(newDist).catch((err) => {
+      console.warn('Backend distributor create notice:', err);
+    });
 
     setShowAddModal(false);
     setName('');

@@ -1,13 +1,50 @@
 import type { Retailer } from '../types';
 import { mockRetailers } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import { simulateNetworkDelay } from './client';
+import { apiFetch, simulateNetworkDelay } from './client';
+
+const LOCAL_STORAGE_KEY = 'fieldassist_retailers';
+
+function getLocalRetailers(): Retailer[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [...mockRetailers];
+}
+
+function saveLocalRetailers(list: Retailer[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 export const retailersApi = {
   /**
-   * GET /api/v1/retailers
+   * GET /api/retailers
    */
   async getRetailers(params?: { search?: string; type?: string; status?: string }): Promise<Retailer[]> {
+    // 1. Try native Serverless Backend (/api/retailers)
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.search) queryParams.set('q', params.search);
+      if (params?.type && params.type !== 'All') queryParams.set('type', params.type);
+      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
+      const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+      const res = await apiFetch<{ success: boolean; data: Retailer[] }>(`/retailers${qs}`);
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        saveLocalRetailers(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.warn('Backend /api/retailers fallback to cache:', err);
+    }
+
+    // 2. Try Supabase if configured
     try {
       let query = supabase.from('retailers').select('*');
 
@@ -44,14 +81,16 @@ export const retailersApi = {
           status: r.is_active === false ? 'Blocked' : (r.status as any) || 'Active',
           rating: Number(r.rating ?? 4.8),
         }));
+        saveLocalRetailers(mapped);
         return mapped;
       }
     } catch (err) {
-      console.warn('Supabase retailers query fallback:', err);
+      // Supabase unavailable
     }
 
-    await simulateNetworkDelay(150);
-    let items = [...mockRetailers];
+    // 3. Fallback to LocalStorage Persistent Cache / Mock Data
+    await simulateNetworkDelay(100);
+    let items = getLocalRetailers();
 
     if (params?.type && params.type !== 'All') {
       items = items.filter((r) => r.type === params.type);
@@ -74,37 +113,58 @@ export const retailersApi = {
   },
 
   /**
-   * GET /api/v1/retailers/:id
+   * GET /api/retailers/:id
    */
   async getRetailerById(id: string): Promise<Retailer | null> {
     try {
-      const { data, error } = await supabase.from('retailers').select('*').eq('id', id).single();
-      if (!error && data) return data as Retailer;
-    } catch {
-      // Fallback
-    }
+      const res = await apiFetch<{ success: boolean; data: Retailer[] }>(`/retailers?q=${encodeURIComponent(id)}`);
+      if (res && res.data && res.data.length > 0) {
+        return res.data[0];
+      }
+    } catch {}
 
-    await simulateNetworkDelay(150);
-    return mockRetailers.find((r) => r.id === id) || null;
+    const local = getLocalRetailers();
+    return local.find((r) => r.id === id) || null;
   },
 
   /**
-   * POST /api/v1/retailers
+   * POST /api/retailers
    */
   async createRetailer(data: Omit<Retailer, 'id'>): Promise<Retailer> {
+    // 1. Post to Serverless Backend
     try {
-      const { data: inserted, error } = await supabase.from('retailers').insert([data]).select().single();
-      if (!error && inserted) return inserted as Retailer;
-    } catch {
-      // Fallback
+      const res = await apiFetch<{ success: boolean; data: Retailer }>('/retailers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      if (res && res.data) {
+        const local = getLocalRetailers();
+        const updated = [res.data, ...local.filter((r) => r.id !== res.data.id)];
+        saveLocalRetailers(updated);
+        return res.data;
+      }
+    } catch (err) {
+      console.warn('Backend /api/retailers POST notice:', err);
     }
 
-    await simulateNetworkDelay(250);
+    // 2. Try Supabase if configured
+    try {
+      const { data: inserted, error } = await supabase.from('retailers').insert([data]).select().single();
+      if (!error && inserted) {
+        const local = getLocalRetailers();
+        saveLocalRetailers([inserted as Retailer, ...local]);
+        return inserted as Retailer;
+      }
+    } catch {}
+
+    // 3. Fallback Local Persistence
+    await simulateNetworkDelay(150);
     const newOutlet: Retailer = {
       ...data,
-      id: `ret-${String(mockRetailers.length + 1).padStart(3, '0')}`,
+      id: `ret-${Date.now()}`,
     };
-    mockRetailers.unshift(newOutlet);
+    const local = getLocalRetailers();
+    saveLocalRetailers([newOutlet, ...local]);
     return newOutlet;
   },
 };

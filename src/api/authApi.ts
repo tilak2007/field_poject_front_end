@@ -1,6 +1,6 @@
 import type { User, AuthResponse, LoginCredentials, SignUpData, UserRole } from '../types/auth';
 import { supabase } from '../lib/supabase';
-import { setAuthToken, removeAuthToken, simulateNetworkDelay } from './client';
+import { setAuthToken, removeAuthToken, simulateNetworkDelay, apiFetch } from './client';
 
 export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }> = {
   'vinaymeghu09@gmail.com': {
@@ -108,7 +108,7 @@ function saveAccountToRegistry(email: string, user: User, password: string): voi
 
 export const authApi = {
   /**
-   * Authenticate permanent credentials against registry and Supabase
+   * Authenticate permanent credentials against registry and Serverless backend
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const email = credentials.email.toLowerCase().trim();
@@ -118,7 +118,28 @@ export const authApi = {
       throw { message: 'Please enter both your email and password.', status: 400 };
     }
 
-    // 1. Try Supabase Auth if online
+    // 1. Try Serverless Backend (/api/auth)
+    try {
+      const res = await apiFetch<{ success: boolean; user: User; token: string; expiresIn: number }>('/auth', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'login', email, password }),
+      });
+      if (res && res.success && res.user && res.token) {
+        setAuthToken(res.token);
+        localStorage.setItem('fieldassist_user_profile', JSON.stringify(res.user));
+        localStorage.setItem('fieldassist_auth_token', res.token);
+        saveAccountToRegistry(email, res.user, password);
+        return { user: res.user, token: res.token, expiresIn: res.expiresIn || 604800 };
+      }
+    } catch (err: any) {
+      // If server returned 401 or invalid password, honor the message
+      if (err?.status === 401) {
+        throw { message: err.message || 'Invalid password. Please enter the correct password for this account.', status: 401 };
+      }
+      console.warn('Backend /api/auth notice, trying fallback auth:', err);
+    }
+
+    // 2. Try Supabase Auth if online
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -166,8 +187,8 @@ export const authApi = {
       // Continue to local permanent registry check
     }
 
-    // 2. Validate against permanent accounts registry
-    await simulateNetworkDelay(150);
+    // 3. Validate against permanent accounts registry
+    await simulateNetworkDelay(100);
     const registry = getAccountsRegistry();
     const account = registry[email];
 
@@ -209,7 +230,31 @@ export const authApi = {
       throw { message: 'Password must be at least 6 characters long.', status: 400 };
     }
 
-    // Check if account already exists
+    // 1. Try Serverless Backend (/api/auth)
+    try {
+      const res = await apiFetch<{ success: boolean; user: User; token: string; expiresIn: number }>('/auth', {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'register',
+          email,
+          password,
+          fullName: data.fullName,
+          role: data.role,
+          territory: data.territory,
+        }),
+      });
+      if (res && res.success && res.user && res.token) {
+        setAuthToken(res.token);
+        localStorage.setItem('fieldassist_user_profile', JSON.stringify(res.user));
+        localStorage.setItem('fieldassist_auth_token', res.token);
+        saveAccountToRegistry(email, res.user, password);
+        return { user: res.user, token: res.token, expiresIn: res.expiresIn || 604800 };
+      }
+    } catch (err) {
+      console.warn('Backend /api/auth register notice, falling back:', err);
+    }
+
+    // Check if account already exists in registry
     const registry = getAccountsRegistry();
     if (registry[email]) {
       throw {

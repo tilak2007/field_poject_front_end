@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { mockOrders, mockProducts, mockRetailers } from '../data/mockData';
 import type { Order, OrderItem } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { ordersApi, productsApi } from '../api';
 
 interface ActiveProduct {
   id: string;
@@ -60,27 +61,10 @@ export const Orders: React.FC = () => {
   const fetchActiveProducts = async () => {
     setIsLoadingProducts(true);
     try {
-      const { data: products, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-
-      if (!error && products && products.length > 0) {
+      const products = await productsApi.getProducts();
+      if (products && products.length > 0) {
         setProductsList(
           products.map((p) => ({
-            id: p.id,
-            name: p.name,
-            sku: p.sku,
-            unit_price: Number(p.unit_price),
-            stock_cases: Number(p.stock_cases),
-            category: p.category,
-          }))
-        );
-      } else {
-        // Fallback to mock products if database table is not seeded yet
-        setProductsList(
-          mockProducts.map((p) => ({
             id: p.id,
             name: p.name,
             sku: p.sku,
@@ -107,49 +91,12 @@ export const Orders: React.FC = () => {
     }
   };
 
-  // 1. Fetch order history:
+  // 2. Fetch order history:
   const fetchOrders = async () => {
     try {
-      const { data: supaOrders, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          retailer:retailers(name, phone, address),
-          items:order_items(quantity, unit_price, total_price, product:products(name, sku))
-        `)
-        .order('created_at', { ascending: false });
-
-      if (!error && supaOrders && supaOrders.length > 0) {
-        const mappedOrders: Order[] = supaOrders.map((o: any) => ({
-          id: o.id,
-          orderNumber: o.order_number,
-          retailerId: o.retailer_id,
-          retailerName: o.retailer?.name || o.retailer_name || 'Retailer Outlet',
-          distributorId: o.distributor_id || 'dist-01',
-          distributorName: o.distributor_name || 'Apex Logistics & FMCG Hub',
-          repId: o.rep_id || 'rep-01',
-          repName: o.rep_name || 'Field Sales Rep',
-          date:
-            o.date ||
-            (o.created_at ? o.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
-          totalAmount: Number(o.total_amount),
-          paymentStatus: o.payment_status || 'Pending',
-          orderStatus: o.order_status || 'Processing',
-          deliveryDateEstimated:
-            o.delivery_date_estimated ||
-            new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0],
-          items: (o.items || []).map((it: any) => ({
-            productId: it.product_id || '',
-            productName: it.product?.name || 'Product SKU',
-            quantityCases: Number(it.quantity),
-            unitPrice: Number(it.unit_price),
-            totalPrice: Number(it.total_price),
-          })),
-        }));
-
-        const existingIds = new Set(mappedOrders.map((m) => m.id));
-        const combined = [...mappedOrders, ...mockOrders.filter((mo) => !existingIds.has(mo.id))];
-        setOrders(combined);
+      const fetched = await ordersApi.getOrders();
+      if (fetched && fetched.length > 0) {
+        setOrders(fetched);
       }
     } catch (err) {
       console.warn('fetchOrders notice:', err);
@@ -282,6 +229,13 @@ export const Orders: React.FC = () => {
         })
       );
 
+      // Persist to serverless backend API
+      try {
+        await ordersApi.createOrder(newOrder);
+      } catch (saveErr) {
+        console.warn('Backend order save notice:', saveErr);
+      }
+
       setOrders((prev) => [newOrder, ...prev]);
       setOrderFeedback({
         type: 'success',
@@ -313,12 +267,9 @@ export const Orders: React.FC = () => {
     setIsCancelling(true);
     try {
       try {
-        await supabase.rpc('cancel_order_atomic', {
-          _order_id: orderId,
-          _reason: 'Retailer cancelled order',
-        });
+        await ordersApi.cancelOrder(orderId);
       } catch (rpcErr) {
-        console.warn('RPC cancel_order_atomic notice, applying fallback:', rpcErr);
+        console.warn('Cancel order notice:', rpcErr);
       }
 
       // Update state locally to Cancelled

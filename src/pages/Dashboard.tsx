@@ -35,6 +35,7 @@ import {
   mockOrders,
   mockVisits,
 } from '../data/mockData';
+import { dashboardApi } from '../api';
 
 interface DashboardStats {
   today_orders_count: number;
@@ -63,6 +64,20 @@ export const Dashboard: React.FC = () => {
   const fetchDashboardStats = async () => {
     setIsSyncing(true);
     try {
+      // 1. Try native Serverless Backend (/api/dashboard)
+      try {
+        const liveStats = await dashboardApi.getDashboardSummary();
+        if (liveStats) {
+          setStats(liveStats);
+          setToastMessage('Live Executive Analytics synchronized with FieldAssist Backend!');
+          setTimeout(() => setToastMessage(null), 3500);
+          return;
+        }
+      } catch (backendErr) {
+        console.warn('Backend /api/dashboard query notice:', backendErr);
+      }
+
+      // 2. Try Supabase RPC if configured
       const { data: statsData, error } = await supabase.rpc('get_dashboard_summary');
 
       if (!error && statsData) {

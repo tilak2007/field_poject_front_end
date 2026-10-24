@@ -1,14 +1,50 @@
 import type { Product, InventoryItem } from '../types';
 import { mockProducts } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import { simulateNetworkDelay } from './client';
+import { apiFetch, simulateNetworkDelay } from './client';
+
+const LOCAL_STORAGE_KEY = 'fieldassist_products';
+
+function getLocalProducts(): Product[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [...mockProducts];
+}
+
+function saveLocalProducts(list: Product[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 export const productsApi = {
   /**
-   * GET /api/v1/products
+   * GET /api/products
    * List all products in catalog
    */
   async getProducts(params?: { category?: string; search?: string }): Promise<Product[]> {
+    // 1. Try native Serverless Backend (/api/products)
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.category && params.category !== 'All') queryParams.set('category', params.category);
+      if (params?.search) queryParams.set('q', params.search);
+      const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+      const res = await apiFetch<{ success: boolean; data: Product[] }>(`/products${qs}`);
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        saveLocalProducts(res.data);
+        return res.data;
+      }
+    } catch (e) {
+      console.warn('Backend /api/products fallback to cache:', e);
+    }
+
+    // 2. Try Supabase if configured
     try {
       let query = supabase.from('products').select('*').eq('is_active', true).order('name');
       if (params?.category && params.category !== 'All') {
@@ -19,7 +55,7 @@ export const productsApi = {
       }
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        return data.map((p: any) => ({
+        const mapped: Product[] = data.map((p: any) => ({
           id: p.id,
           sku: p.sku,
           name: p.name,
@@ -33,13 +69,16 @@ export const productsApi = {
           imageUrl: p.image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80',
           status: Number(p.stock_cases ?? 100) > 30 ? 'In Stock' : 'Low Stock',
         }));
+        saveLocalProducts(mapped);
+        return mapped;
       }
     } catch (e) {
-      console.warn('Supabase products fetch fallback:', e);
+      // Supabase unavailable
     }
 
-    await simulateNetworkDelay(200);
-    let items = [...mockProducts];
+    // 3. Fallback to LocalStorage Persistent Cache / Mock Data
+    await simulateNetworkDelay(100);
+    let items = getLocalProducts();
 
     if (params?.category && params.category !== 'All') {
       items = items.filter((p) => p.category === params.category);
@@ -54,18 +93,18 @@ export const productsApi = {
   },
 
   /**
-   * GET /api/v1/inventory
+   * GET /api/inventory
    * Fetch current warehouse inventory stock items
    */
   async getInventory(): Promise<InventoryItem[]> {
-    await simulateNetworkDelay(200);
-    return mockProducts.map((p, idx) => ({
+    const products = await this.getProducts();
+    return products.map((p, idx) => ({
       id: `inv-${idx + 1}`,
       productId: p.id,
       productName: p.name,
       sku: p.sku,
-      distributorName: 'Apex Logistics & FMCG',
-      distributorId: 'dist-01',
+      distributorName: 'Apex FMCG Logistics Ltd',
+      distributorId: 'dist-1',
       casesAvailable: p.stockInHandCases,
       casesReserved: Math.floor(p.stockInHandCases * 0.15),
       batchNumber: `BATCH-2026-${100 + idx}`,

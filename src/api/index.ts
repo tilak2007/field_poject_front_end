@@ -4,9 +4,20 @@ import { retailersApi } from './retailersApi';
 import { ordersApi } from './ordersApi';
 import { productsApi } from './productsApi';
 import { visitsApi } from './visitsApi';
-import { API_BASE_URL, USE_MOCK_API } from './client';
+import { distributorsApi } from './distributorsApi';
+import { dashboardApi } from './dashboardApi';
+import { API_BASE_URL, USE_MOCK_API, apiFetch } from './client';
 import * as backendFoundation from '../integrations/supabase';
 
+export * from './client';
+export * from './authApi';
+export * from './repsApi';
+export * from './retailersApi';
+export * from './ordersApi';
+export * from './productsApi';
+export * from './visitsApi';
+export * from './distributorsApi';
+export * from './dashboardApi';
 export * from '../integrations/supabase';
 
 export const api = {
@@ -16,7 +27,10 @@ export const api = {
   orders: ordersApi,
   products: productsApi,
   visits: visitsApi,
+  distributors: distributorsApi,
+  dashboard: dashboardApi,
   backend: backendFoundation,
+  fetch: apiFetch,
   config: {
     baseUrl: API_BASE_URL,
     isMock: USE_MOCK_API,
@@ -24,3 +38,4 @@ export const api = {
 };
 
 export default api;
+

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarCheck,
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { mockVisits, mockRetailers } from '../data/mockData';
 import type { Visit } from '../types';
+import { visitsApi } from '../api';
 
 export const Visits: React.FC = () => {
   const [visitsList, setVisitsList] = useState<Visit[]>(() => {
@@ -29,6 +30,14 @@ export const Visits: React.FC = () => {
     }
     return mockVisits;
   });
+
+  useEffect(() => {
+    visitsApi.getVisits().then((data) => {
+      if (data && data.length > 0) {
+        setVisitsList(data);
+      }
+    }).catch(() => {});
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
@@ -90,6 +99,12 @@ export const Visits: React.FC = () => {
     const updated = [newVisit, ...visitsList];
     setVisitsList(updated);
     localStorage.setItem('fieldassist_visits', JSON.stringify(updated));
+
+    // Persist to serverless backend API
+    visitsApi.createVisitCheckIn(newVisit).catch((err) => {
+      console.warn('Backend visit create notice:', err);
+    });
+
     setShowScheduleModal(false);
 
     setToastMessage(`Special Visit ${nextCode} for "${finalRetailer}" scheduled successfully!`);

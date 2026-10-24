@@ -1,14 +1,50 @@
 import type { SalesRep } from '../types';
 import { mockSalesReps } from '../data/mockData';
 import { supabase } from '../lib/supabase';
-import { simulateNetworkDelay } from './client';
+import { apiFetch, simulateNetworkDelay } from './client';
+
+const LOCAL_STORAGE_KEY = 'fieldassist_reps';
+
+function getLocalReps(): SalesRep[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return [...mockSalesReps];
+}
+
+function saveLocalReps(list: SalesRep[]): void {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+  } catch {}
+}
 
 export const repsApi = {
   /**
-   * GET /api/v1/reps
-   * Query Supabase `sales_reps` table or fallback to mock data
+   * GET /api/reps
    */
   async getSalesReps(params?: { search?: string; status?: string; region?: string }): Promise<SalesRep[]> {
+    // 1. Try Serverless Backend (/api/reps)
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.region && params.region !== 'All Regions') queryParams.set('region', params.region);
+      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
+      if (params?.search) queryParams.set('q', params.search);
+      const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+      const res = await apiFetch<{ success: boolean; data: SalesRep[] }>(`/reps${qs}`);
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        saveLocalReps(res.data);
+        return res.data;
+      }
+    } catch (err) {
+      console.warn('Backend /api/reps fallback to cache:', err);
+    }
+
+    // 2. Try Supabase if configured
     try {
       let query = supabase.from('sales_reps').select('*');
 
@@ -43,15 +79,16 @@ export const repsApi = {
           salesClosedAmount: Number(r.sales_closed_amount ?? 0),
           joinDate: r.join_date || '2024-01-01',
         }));
+        saveLocalReps(mapped);
         return mapped;
       }
     } catch (err) {
-      console.warn('Supabase reps query fallback:', err);
+      // Supabase unavailable
     }
 
-    // Fallback to mock data
-    await simulateNetworkDelay(150);
-    let reps = [...mockSalesReps];
+    // 3. Fallback Local Storage
+    await simulateNetworkDelay(100);
+    let reps = getLocalReps();
 
     if (params?.region && params.region !== 'All Regions') {
       reps = reps.filter((r) => r.region === params.region);
@@ -73,60 +110,76 @@ export const repsApi = {
   },
 
   /**
-   * GET /api/v1/reps/:id
+   * GET /api/reps/:id
    */
   async getSalesRepById(id: string): Promise<SalesRep | null> {
-    try {
-      const { data, error } = await supabase.from('sales_reps').select('*').eq('id', id).single();
-      if (!error && data) return data as SalesRep;
-    } catch {
-      // Fallback
-    }
-
-    await simulateNetworkDelay(150);
-    return mockSalesReps.find((r) => r.id === id) || null;
+    const reps = await this.getSalesReps();
+    return reps.find((r) => r.id === id) || null;
   },
 
   /**
-   * POST /api/v1/reps
+   * POST /api/reps
    */
   async createSalesRep(data: Omit<SalesRep, 'id'>): Promise<SalesRep> {
+    // 1. Try Serverless Backend
     try {
-      const { data: inserted, error } = await supabase.from('sales_reps').insert([data]).select().single();
-      if (!error && inserted) return inserted as SalesRep;
-    } catch {
-      // Fallback
+      const res = await apiFetch<{ success: boolean; data: SalesRep }>('/reps', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      if (res && res.data) {
+        const local = getLocalReps();
+        const updated = [res.data, ...local.filter((r) => r.id !== res.data.id)];
+        saveLocalReps(updated);
+        return res.data;
+      }
+    } catch (err) {
+      console.warn('Backend /api/reps POST notice:', err);
     }
 
-    await simulateNetworkDelay(250);
+    // 2. Try Supabase
+    try {
+      const { data: inserted, error } = await supabase.from('sales_reps').insert([data]).select().single();
+      if (!error && inserted) {
+        const local = getLocalReps();
+        saveLocalReps([inserted as SalesRep, ...local]);
+        return inserted as SalesRep;
+      }
+    } catch {}
+
+    // 3. Fallback Local
+    await simulateNetworkDelay(150);
     const newRep: SalesRep = {
       ...data,
-      id: `rep-${String(mockSalesReps.length + 1).padStart(2, '0')}`,
+      id: `rep-${Date.now()}`,
     };
-    mockSalesReps.unshift(newRep);
+    const local = getLocalReps();
+    saveLocalReps([newRep, ...local]);
     return newRep;
   },
 
   /**
-   * PUT /api/v1/reps/:id
+   * PUT /api/reps/:id
    */
   async updateSalesRep(id: string, updates: Partial<SalesRep>): Promise<SalesRep> {
     try {
-      const { data: updated, error } = await supabase
-        .from('sales_reps')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
-      if (!error && updated) return updated as SalesRep;
-    } catch {
-      // Fallback
-    }
+      const res = await apiFetch<{ success: boolean; data: SalesRep }>(`/reps?id=${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates),
+      });
+      if (res && res.data) {
+        const local = getLocalReps();
+        const updated = local.map((r) => (r.id === id ? res.data : r));
+        saveLocalReps(updated);
+        return res.data;
+      }
+    } catch {}
 
-    await simulateNetworkDelay(200);
-    const index = mockSalesReps.findIndex((r) => r.id === id);
+    const local = getLocalReps();
+    const index = local.findIndex((r) => r.id === id);
     if (index === -1) throw { message: 'Sales Representative not found', status: 404 };
-    mockSalesReps[index] = { ...mockSalesReps[index], ...updates };
-    return mockSalesReps[index];
+    local[index] = { ...local[index], ...updates };
+    saveLocalReps(local);
+    return local[index];
   },
 };
