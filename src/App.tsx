@@ -19,6 +19,7 @@ import { Attendance } from './pages/Attendance';
 import { Targets } from './pages/Targets';
 import { Analytics } from './pages/Analytics';
 import { Reports } from './pages/Reports';
+import { LiveTracking } from './pages/LiveTracking';
 
 export const App: React.FC = () => {
   return (
@@ -41,6 +42,9 @@ export const App: React.FC = () => {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/live-tracking" element={<LiveTracking />} />
+            <Route path="/tracking" element={<LiveTracking />} />
+            <Route path="/gps" element={<LiveTracking />} />
             <Route
               path="/reps"
               element={

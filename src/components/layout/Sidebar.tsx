@@ -12,6 +12,7 @@ import {
   MapPin,
   CalendarCheck,
   Clock,
+  Navigation,
   Target,
   TrendingUp,
   FileSpreadsheet,
@@ -44,6 +45,12 @@ const navCategories: NavCategory[] = [
     title: 'Field Operations',
     items: [
       { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      {
+        name: 'Live GPS Tracking',
+        path: '/live-tracking',
+        icon: Navigation,
+        badge: 'LIVE',
+      },
       {
         name: 'Sales Representatives',
         path: '/reps',
@@ -204,13 +211,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 {item.badge && (
                                   <span
                                     className={clsx(
-                                      'text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors',
-                                      isActive
+                                      'text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1',
+                                      item.badge === 'LIVE'
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
+                                        : isActive
                                         ? 'bg-white/20 text-white'
                                         : 'bg-slate-800 text-slate-400 group-hover:bg-brand-500/20 group-hover:text-brand-300'
                                     )}
                                   >
-                                    {item.badge}
+                                    {item.badge === 'LIVE' && (
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                                    )}
+                                    <span>{item.badge}</span>
                                   </span>
                                 )}
                                 <ChevronRight

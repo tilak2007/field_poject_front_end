@@ -27,6 +27,7 @@ export default async function handler(req: any, res: any) {
       '/api/visits',
       '/api/dashboard',
       '/api/auth',
+      '/api/gps',
     ],
   });
 }

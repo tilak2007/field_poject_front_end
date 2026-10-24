@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   TrendingUp,
@@ -14,6 +15,7 @@ import {
   Package,
   ShieldCheck,
   AlertTriangle,
+  Navigation,
 } from 'lucide-react';
 import {
   LineChart,
@@ -188,11 +190,19 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <Link
+              to="/live-tracking"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+            >
+              <Navigation className="w-4 h-4 animate-pulse" />
+              <span>Live GPS Radar</span>
+              <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+            </Link>
             <button
               onClick={fetchDashboardStats}
               disabled={isSyncing}
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 text-xs font-semibold border border-slate-700 transition-all shadow-md cursor-pointer active:scale-95"
-              title="Sync daily analytics from Supabase"
+              title="Sync daily analytics from backend"
             >
               <RefreshCw className={`w-4 h-4 text-brand-400 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>Sync Live Analytics</span>
