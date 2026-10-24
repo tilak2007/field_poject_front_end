@@ -23,11 +23,32 @@ export const SalesReps: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [repsList, setRepsList] = useState<SalesRep[]>(mockSalesReps);
+  const [repsList, setRepsList] = useState<SalesRep[]>(() => {
+    const saved = localStorage.getItem('fieldassist_sales_reps');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // Fallback
+      }
+    }
+    return mockSalesReps;
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [selectedRep, setSelectedRep] = useState<SalesRep | null>(null);
   const [activeTab, setActiveTab] = useState<'performance' | 'visits' | 'orders'>('performance');
+
+  const [showOnboardModal, setShowOnboardModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // New Representative Form state
+  const [newRepName, setNewRepName] = useState('');
+  const [newRepPhone, setNewRepPhone] = useState('');
+  const [newRepEmail, setNewRepEmail] = useState('');
+  const [newRepTerritory, setNewRepTerritory] = useState('North Delhi');
+  const [newRepTarget, setNewRepTarget] = useState<number>(1500000);
 
   // Fetch real sales representatives from backend database
   useEffect(() => {
@@ -36,7 +57,11 @@ export const SalesReps: React.FC = () => {
         const data = await repsApi.getSalesReps();
         if (data && data.length > 0) {
           const existingIds = new Set(data.map((d) => d.id));
-          setRepsList([...data, ...mockSalesReps.filter((m) => !existingIds.has(m.id))]);
+          setRepsList((prev) => {
+            const merged = [...data, ...prev.filter((m) => !existingIds.has(m.id))];
+            localStorage.setItem('fieldassist_sales_reps', JSON.stringify(merged));
+            return merged;
+          });
         }
       } catch (err) {
         console.warn('Reps fetch notice:', err);
@@ -44,6 +69,52 @@ export const SalesReps: React.FC = () => {
     };
     fetchReps();
   }, []);
+
+  const handleOnboardSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const nextCodeNum = 100 + repsList.length + 1;
+    const nextCode = `SR-${nextCodeNum}`;
+    const region =
+      newRepTerritory.includes('Delhi')
+        ? 'North Zone (Delhi-NCR)'
+        : newRepTerritory.includes('Mumbai')
+        ? 'West Zone (Mumbai)'
+        : newRepTerritory.includes('Bengaluru')
+        ? 'South Zone (BLR)'
+        : 'Central Zone';
+
+    const newRep: SalesRep = {
+      id: `rep-${Date.now()}`,
+      name: newRepName.trim(),
+      code: nextCode,
+      phone: newRepPhone.trim(),
+      email: newRepEmail.trim() || `${newRepName.toLowerCase().replace(/\s+/g, '.')}@fieldassist.io`,
+      territory: newRepTerritory,
+      region,
+      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      status: 'Active',
+      batteryLevel: 100,
+      lastCheckIn: 'Just now',
+      targetAmount: Number(newRepTarget) || 1500000,
+      targetAchievedPct: 0,
+      visitsTodayCount: 0,
+      totalDistanceKm: 0,
+      salesClosedAmount: 0,
+      joinDate: new Date().toISOString().split('T')[0],
+    };
+
+    const updated = [newRep, ...repsList];
+    setRepsList(updated);
+    localStorage.setItem('fieldassist_sales_reps', JSON.stringify(updated));
+    repsApi.createSalesRep(newRep).catch(() => {});
+
+    setShowOnboardModal(false);
+    setNewRepName('');
+    setNewRepPhone('');
+    setNewRepEmail('');
+    setToastMessage(`Sales Representative ${newRep.name} (${newRep.code}) onboarded successfully!`);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   // Handle URL parameter sync for rep details profile page
   useEffect(() => {
@@ -105,7 +176,10 @@ export const SalesReps: React.FC = () => {
           </p>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto">
+        <button
+          onClick={() => setShowOnboardModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
+        >
           <Plus className="w-4 h-4" />
           <span>Onboard New Representative</span>
         </button>
@@ -518,6 +592,127 @@ export const SalesReps: React.FC = () => {
                 )}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-950/90 border border-emerald-800 text-white shadow-2xl flex items-center gap-3 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Onboard New Representative Modal Dialog */}
+      {showOnboardModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel w-full max-w-lg rounded-3xl p-6 space-y-5 relative border border-slate-700 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-white">Onboard New Representative</h2>
+                  <p className="text-xs text-slate-400">Add a new field agent to your sales hierarchy</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOnboardModal(false)}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleOnboardSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-slate-300">Representative Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newRepName}
+                  onChange={(e) => setNewRepName(e.target.value)}
+                  placeholder="e.g. Ramesh Kumar"
+                  className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">Phone Contact *</label>
+                  <input
+                    type="tel"
+                    required
+                    value={newRepPhone}
+                    onChange={(e) => setNewRepPhone(e.target.value)}
+                    placeholder="+91 98765 00000"
+                    className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">Work Email</label>
+                  <input
+                    type="email"
+                    value={newRepEmail}
+                    onChange={(e) => setNewRepEmail(e.target.value)}
+                    placeholder="rep@fieldassist.io"
+                    className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">Territory *</label>
+                  <select
+                    value={newRepTerritory}
+                    onChange={(e) => setNewRepTerritory(e.target.value)}
+                    className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                  >
+                    <option value="North Delhi">North Delhi</option>
+                    <option value="South Mumbai">South Mumbai</option>
+                    <option value="Bengaluru Central">Bengaluru Central</option>
+                    <option value="Chennai Metro">Chennai Metro</option>
+                    <option value="Ahmedabad East">Ahmedabad East</option>
+                    <option value="Kolkata Hub">Kolkata Hub</option>
+                    <option value="Hyderabad West">Hyderabad West</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-slate-300">Monthly Target (₹) *</label>
+                  <input
+                    type="number"
+                    required
+                    min={100000}
+                    step={50000}
+                    value={newRepTarget}
+                    onChange={(e) => setNewRepTarget(Number(e.target.value))}
+                    className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowOnboardModal(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Onboard Representative</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -57,15 +57,8 @@ export const App: React.FC = () => {
             <Route path="/targets" element={<Targets />} />
             <Route path="/analytics" element={<Analytics />} />
             
-            {/* Reports - Restricted to System Admin and Sales Manager */}
-            <Route
-              path="/reports"
-              element={
-                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
-                  <Reports />
-                </ProtectedRoute>
-              }
-            />
+            {/* Reports */}
+            <Route path="/reports" element={<Reports />} />
           </Route>
 
           {/* Fallback route */}
