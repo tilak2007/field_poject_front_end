@@ -13,12 +13,11 @@ import {
   LogIn,
   Users,
   Briefcase,
-  KeyRound,
   X,
 } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login, signUp, logout, setUserSession, isLoading, error, clearError, isAuthenticated, user } = useAuth();
+  const { login, signUp, setUserSession, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   // Mode: 'login' or 'signup'
@@ -210,52 +209,6 @@ export const Login: React.FC = () => {
       {/* Main Centered Permanent Login / Sign Up Card */}
       <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-4 sm:p-6 my-auto">
         <div className="w-full max-w-[440px] bg-white rounded-2xl shadow-[0_10px_40px_-15px_rgba(0,0,0,0.1)] border border-slate-200/80 p-6 sm:p-8 space-y-4">
-          
-          {/* Active Session Notification / Option to Switch or Continue */}
-          {isAuthenticated && user && (
-            <div className="p-3.5 rounded-xl bg-slate-900 text-white border border-slate-800 space-y-2.5 text-xs shadow-md">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="font-semibold text-slate-200">Active Session Detected</span>
-                </div>
-                <span className="text-[10px] text-emerald-400 font-mono font-medium px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-800/50">
-                  {user.role}
-                </span>
-              </div>
-              <p className="text-slate-300 text-[11px] leading-relaxed">
-                Currently signed in as <strong className="text-white">{user.name}</strong> ({user.email})
-              </p>
-              <div className="flex items-center gap-2 pt-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (user.role === 'Sales Representative') {
-                      navigate('/rep/attendance');
-                    } else {
-                      navigate('/admin/dashboard');
-                    }
-                  }}
-                  className="flex-1 py-2 px-3 rounded-lg bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                >
-                  <span>Open Portal / Dashboard →</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await logout();
-                    setEmail('');
-                    setPassword('');
-                    setActionMessage('Signed out. You can now authenticate with a different account.');
-                  }}
-                  className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-rose-900/40 hover:text-rose-200 text-slate-300 text-xs font-medium border border-slate-700 transition-all cursor-pointer"
-                >
-                  <span>Switch User</span>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Mode Switcher Tabs */}
           <div className="flex p-1 rounded-xl bg-slate-100 border border-slate-200/70 text-xs font-semibold">
             <button
@@ -507,71 +460,6 @@ export const Login: React.FC = () => {
                 </button>
               </p>
             )}
-          </div>
-        </div>
-
-        {/* Permanent Verified Credentials Guide Banner */}
-        <div className="w-full max-w-[440px] mt-4 p-3.5 rounded-xl bg-slate-900/90 text-white border border-slate-800 shadow-lg text-xs space-y-2">
-          <div className="flex items-center justify-between font-semibold text-slate-200">
-            <span className="flex items-center gap-1.5 text-brand-400">
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Permanent Master Accounts</span>
-            </span>
-            <span className="text-[10px] text-emerald-400 font-mono">Always Active</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300 font-mono">
-            <div
-              onClick={() => {
-                setEmail('vinaymeghu09@gmail.com');
-                setPassword('vinay123');
-                setMode('login');
-                setActionMessage('Selected: Vinayaka Tilak (System Admin). Click "Log in" to authenticate.');
-              }}
-              className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 cursor-pointer transition-all"
-            >
-              <div className="font-bold text-white truncate">vinaymeghu09@gmail.com</div>
-              <div className="text-slate-400 text-[10px]">Pass: vinay123 (Admin)</div>
-            </div>
-
-            <div
-              onClick={() => {
-                setEmail('admin@fieldassist.io');
-                setPassword('admin123');
-                setMode('login');
-                setActionMessage('Selected: Rajesh Sharma (System Admin). Click "Log in" to authenticate.');
-              }}
-              className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 cursor-pointer transition-all"
-            >
-              <div className="font-bold text-white truncate">admin@fieldassist.io</div>
-              <div className="text-slate-400 text-[10px]">Pass: admin123 (Admin)</div>
-            </div>
-
-            <div
-              onClick={() => {
-                setEmail('tilak2007@gmail.com');
-                setPassword('tilak123');
-                setMode('login');
-                setActionMessage('Selected: Tilak P.S. (Sales Manager). Click "Log in" to authenticate.');
-              }}
-              className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 cursor-pointer transition-all"
-            >
-              <div className="font-bold text-white truncate">tilak2007@gmail.com</div>
-              <div className="text-slate-400 text-[10px]">Pass: tilak123 (Manager)</div>
-            </div>
-
-            <div
-              onClick={() => {
-                setEmail('vikram@fieldassist.io');
-                setPassword('rep123');
-                setMode('login');
-                setActionMessage('Selected: Vikram Sharma (Field Rep). Click "Log in" to authenticate.');
-              }}
-              className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 cursor-pointer transition-all"
-            >
-              <div className="font-bold text-white truncate">vikram@fieldassist.io</div>
-              <div className="text-slate-400 text-[10px]">Pass: rep123 (Field Rep)</div>
-            </div>
           </div>
         </div>
       </main>
