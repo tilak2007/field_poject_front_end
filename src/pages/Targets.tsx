@@ -8,8 +8,9 @@ import { exportToCsv } from '../utils/exportCsv';
 
 export const Targets: React.FC = () => {
   const { user } = useAuth();
-  const isRep = user?.role === 'Sales Representative';
-  const isManagerOrAdmin = !isRep;
+  // ONLY explicitly verified System Admin or Sales Manager have quota allocation authority
+  const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
+  const isRep = !isManagerOrAdmin;
 
   const [targetsList, setTargetsList] = useState<Target[]>(() => {
     const saved = localStorage.getItem('fieldassist_targets');
@@ -153,26 +154,28 @@ export const Targets: React.FC = () => {
         <div>
           <h1 className="text-2xl font-extrabold text-white tracking-tight flex items-center gap-3">
             <TargetIcon className="w-7 h-7 text-brand-400" />
-            <span>Sales Quotas & Targets</span>
+            <span>{isRep ? 'My Allocated Sales Target' : 'Sales Quotas & Targets'}</span>
           </h1>
           <p className="text-slate-400 text-xs mt-1">
-            Monthly revenue targets, visit quota tracking, and outlet acquisition goals.
+            {isRep
+              ? `Personal monthly sales quota assigned by your Area Sales Manager (${user?.territory || 'North Delhi Beat A'}).`
+              : 'Monthly revenue targets, visit quota tracking, and outlet acquisition goals.'}
           </p>
           <div className="flex items-center gap-2 mt-2">
             <span
               className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                user?.role === 'Sales Representative'
+                isRep
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                   : user?.role === 'System Admin'
                   ? 'bg-purple-500/10 text-purple-400 border-purple-500/30'
                   : 'bg-blue-500/10 text-blue-400 border-blue-500/30'
               }`}
             >
-              Role: {user?.role || 'Sales Manager'}
+              Role: {user?.role || (isRep ? 'Sales Representative' : 'Sales Manager')}
             </span>
             <span className="text-[11px] text-slate-400">
-              {user?.role === 'Sales Representative'
-                ? '• Field Rep: Track Personal Target Fulfillment'
+              {isRep
+                ? '• Field Rep: Personal Target Quota (View Only)'
                 : '• Management: Quota Allocation & Achievement Oversight'}
             </span>
           </div>
@@ -301,9 +304,9 @@ export const Targets: React.FC = () => {
         })}
       </div>
 
-      {/* Modal: Allocate Monthly Targets */}
+      {/* Modal: Allocate Monthly Targets (Managers and Admins only) */}
       <AnimatePresence>
-        {showAllocateModal && (
+        {showAllocateModal && isManagerOrAdmin && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}

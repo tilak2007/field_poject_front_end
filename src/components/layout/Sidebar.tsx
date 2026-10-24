@@ -50,6 +50,7 @@ const navCategories: NavCategory[] = [
         path: '/live-tracking',
         icon: Navigation,
         badge: 'LIVE',
+        allowedRoles: ['System Admin', 'Sales Manager'],
       },
       {
         name: 'Sales Representatives',

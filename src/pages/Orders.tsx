@@ -314,7 +314,8 @@ export const Orders: React.FC = () => {
     }
   };
 
-  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
+  const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
+  const isRep = !isManagerOrAdmin;
 
   // 3. Click "Approve Order" button (Managers / Admins)
   const handleApproveOrder = async (orderId: string) => {
@@ -372,7 +373,6 @@ export const Orders: React.FC = () => {
     );
   };
 
-  const isRep = user?.role === 'Sales Representative';
   const visibleOrders = isRep
     ? orders.filter(
         (o) =>

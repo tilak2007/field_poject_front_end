@@ -24,7 +24,8 @@ import { exportToCsv } from '../utils/exportCsv';
 
 export const Visits: React.FC = () => {
   const { user } = useAuth();
-  const isManagerOrAdmin = !user || user.role === 'System Admin' || user.role === 'Sales Manager';
+  const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
+  const isRep = !isManagerOrAdmin;
 
   const [visitsList, setVisitsList] = useState<Visit[]>(() => {
     const saved = localStorage.getItem('fieldassist_visits');
@@ -61,7 +62,6 @@ export const Visits: React.FC = () => {
   const [plannedTime, setPlannedTime] = useState('Today, 02:30 PM');
   const [visitNotes, setVisitNotes] = useState('');
 
-  const isRep = user?.role === 'Sales Representative';
   const visibleVisits = isRep
     ? visitsList.filter(
         (v) =>

@@ -42,9 +42,30 @@ export const App: React.FC = () => {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/dashboard" element={<Dashboard />} />
-            <Route path="/live-tracking" element={<LiveTracking />} />
-            <Route path="/tracking" element={<LiveTracking />} />
-            <Route path="/gps" element={<LiveTracking />} />
+            <Route
+              path="/live-tracking"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <LiveTracking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/tracking"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <LiveTracking />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gps"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin', 'Sales Manager']}>
+                  <LiveTracking />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/reps"
               element={

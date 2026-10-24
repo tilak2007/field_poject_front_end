@@ -57,7 +57,8 @@ interface DashboardStats {
 
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const isRep = user?.role === 'Sales Representative';
+  const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
+  const isRep = !isManagerOrAdmin;
 
   const [stats, setStats] = useState<DashboardStats>({
     today_orders_count: 6,
@@ -374,14 +375,16 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
-            <Link
-              to="/live-tracking"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
-            >
-              <Navigation className="w-4 h-4 animate-pulse" />
-              <span>{isRep ? 'My Live Route' : 'Live GPS Radar'}</span>
-              <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-            </Link>
+            {!isRep && (
+              <Link
+                to="/live-tracking"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+              >
+                <Navigation className="w-4 h-4 animate-pulse" />
+                <span>Live GPS Radar</span>
+                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+              </Link>
+            )}
             <button
               onClick={fetchDashboardStats}
               disabled={isSyncing}

@@ -111,11 +111,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right: GPS Sync, Region Selector, Notifications & User Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* GPS Live Sync Status Pill */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
-          <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
-          <span>Live GPS Active</span>
-        </div>
+        {/* GPS Live Sync Status Pill (Managers / Admins only) */}
+        {(user?.role === 'System Admin' || user?.role === 'Sales Manager') && (
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
+            <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
+            <span>Live GPS Active</span>
+          </div>
+        )}
 
         {/* Region / Territory Selector */}
         <div className="relative hidden lg:flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">

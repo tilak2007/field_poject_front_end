@@ -239,7 +239,8 @@ export const Attendance: React.FC = () => {
   const isCheckedIn = Boolean(todayAttendance?.check_in_time);
   const isCheckedOut = Boolean(todayAttendance?.check_out_time);
 
-  const isRep = user?.role === 'Sales Representative';
+  const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
+  const isRep = !isManagerOrAdmin;
   const visibleAttendanceRecords = isRep
     ? mockAttendanceRecords.filter(
         (a) =>
