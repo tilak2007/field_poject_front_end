@@ -33,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, logout, switchRole } = useAuth();
   const navigate = useNavigate();
+  const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -84,127 +85,141 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Search Bar - Desktop */}
-        <div className="relative w-full max-w-md hidden sm:block">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search reps, retailers, orders, SKU or beat..."
-            className="w-full h-10 pl-10 pr-12 text-xs bg-slate-950/60 border border-slate-800 text-slate-200 placeholder-slate-400 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
-          />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-800 border border-slate-700 rounded shadow-sm">
-            /
-          </kbd>
-        </div>
+        {/* Search Bar - Desktop (Managers / Admins only) */}
+        {isManagerOrAdmin ? (
+          <div className="relative w-full max-w-md hidden sm:block">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search reps, retailers, orders, SKU or beat..."
+              className="w-full h-10 pl-10 pr-12 text-xs bg-slate-950/60 border border-slate-800 text-slate-200 placeholder-slate-400 rounded-xl focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+            <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-800 border border-slate-700 rounded shadow-sm">
+              /
+            </kbd>
+          </div>
+        ) : (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span className="text-slate-400">Beat Territory:</span>
+            <span className="font-bold text-white">{user?.territory || 'North Delhi Beat A'}</span>
+          </div>
+        )}
 
-        {/* Mobile Search Button Toggle */}
-        <button
-          onClick={() => setShowMobileSearch(!showMobileSearch)}
-          className="sm:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800"
-          aria-label="Search"
-        >
-          <Search className="w-5 h-5" />
-        </button>
+        {/* Mobile Search Button Toggle (Managers / Admins only) */}
+        {isManagerOrAdmin && (
+          <button
+            onClick={() => setShowMobileSearch(!showMobileSearch)}
+            className="sm:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800"
+            aria-label="Search"
+          >
+            <Search className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Right: GPS Sync, Region Selector, Notifications & User Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* GPS Live Sync Status Pill (Managers / Admins only) */}
-        {(user?.role === 'System Admin' || user?.role === 'Sales Manager') && (
+        {isManagerOrAdmin && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
             <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
             <span>Live GPS Active</span>
           </div>
         )}
 
-        {/* Region / Territory Selector */}
-        <div className="relative hidden lg:flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">
-          <Globe className="w-4 h-4 text-brand-400" />
-          <select
-            value={selectedRegion}
-            onChange={(e) => onRegionChange(e.target.value)}
-            className="bg-transparent text-xs font-medium text-slate-200 focus:outline-none cursor-pointer pr-1"
-          >
-            <option value="All Regions" className="bg-slate-900 text-slate-200">
-              All India Zones
-            </option>
-            <option value="North Zone" className="bg-slate-900 text-slate-200">
-              North Zone (Delhi-NCR)
-            </option>
-            <option value="West Zone" className="bg-slate-900 text-slate-200">
-              West Zone (Mumbai-Guj)
-            </option>
-            <option value="South Zone" className="bg-slate-900 text-slate-200">
-              South Zone (BLR-CHN)
-            </option>
-            <option value="East Zone" className="bg-slate-900 text-slate-200">
-              East Zone (Kolkata)
-            </option>
-          </select>
-        </div>
+        {/* Region / Territory Selector (Managers / Admins only) */}
+        {isManagerOrAdmin && (
+          <div className="relative hidden lg:flex items-center gap-2 bg-slate-950/60 border border-slate-800 rounded-xl px-3 py-1.5">
+            <Globe className="w-4 h-4 text-brand-400" />
+            <select
+              value={selectedRegion}
+              onChange={(e) => onRegionChange(e.target.value)}
+              className="bg-transparent text-xs font-medium text-slate-200 focus:outline-none cursor-pointer pr-1"
+            >
+              <option value="All Regions" className="bg-slate-900 text-slate-200">
+                All India Zones
+              </option>
+              <option value="North Zone" className="bg-slate-900 text-slate-200">
+                North Zone (Delhi-NCR)
+              </option>
+              <option value="West Zone" className="bg-slate-900 text-slate-200">
+                West Zone (Mumbai-Guj)
+              </option>
+              <option value="South Zone" className="bg-slate-900 text-slate-200">
+                South Zone (BLR-CHN)
+              </option>
+              <option value="East Zone" className="bg-slate-900 text-slate-200">
+                East Zone (Kolkata)
+              </option>
+            </select>
+          </div>
+        )}
 
-        {/* Notifications Dropdown Toggle */}
-        <div className="relative">
-          <button
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-              setShowProfileMenu(false);
-            }}
-            className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-slate-900 animate-ping" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-slate-900" />
-          </button>
+        {/* Notifications Dropdown Toggle (Managers / Admins only) */}
+        {isManagerOrAdmin && (
+          <div className="relative">
+            <button
+              onClick={() => {
+                setShowNotifications(!showNotifications);
+                setShowProfileMenu(false);
+              }}
+              className="relative min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+              aria-label="Notifications"
+            >
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-slate-900 animate-ping" />
+              <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-500 ring-2 ring-slate-900" />
+            </button>
 
-          {/* Notifications Modal Popup */}
-          {showNotifications && (
-            <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl z-50 p-4 space-y-3">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-sm font-semibold text-white">Live Activity Alerts</h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300">
-                    3 New
-                  </span>
+            {/* Notifications Modal Popup */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-3 w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl z-50 p-4 space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-semibold text-white">Live Activity Alerts</h3>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300">
+                      3 New
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowNotifications(false)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setShowNotifications(false)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 min-w-[36px] min-h-[36px] flex items-center justify-center"
-                >
-                  <X className="w-4 h-4" />
+
+                <div className="space-y-2">
+                  {notifications.map((n) => {
+                    const Icon = n.icon;
+                    return (
+                      <div
+                        key={n.id}
+                        className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-950/60 hover:bg-slate-800/50 transition-colors border border-slate-800/40"
+                      >
+                        <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400 shrink-0 mt-0.5">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-xs font-semibold text-slate-200">{n.title}</h4>
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5">{n.desc}</p>
+                          <span className="text-[10px] text-slate-400 mt-1 block">{n.time}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button className="w-full py-2.5 text-center text-xs font-semibold text-brand-400 hover:text-brand-300 hover:bg-slate-800/40 rounded-xl transition-colors">
+                  View All Activity Logs →
                 </button>
               </div>
-
-              <div className="space-y-2">
-                {notifications.map((n) => {
-                  const Icon = n.icon;
-                  return (
-                    <div
-                      key={n.id}
-                      className="flex items-start gap-3 p-2.5 rounded-xl bg-slate-950/60 hover:bg-slate-800/50 transition-colors border border-slate-800/40"
-                    >
-                      <div className="p-2 rounded-lg bg-brand-500/10 text-brand-400 shrink-0 mt-0.5">
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-semibold text-slate-200">{n.title}</h4>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">{n.desc}</p>
-                        <span className="text-[10px] text-slate-400 mt-1 block">{n.time}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <button className="w-full py-2.5 text-center text-xs font-semibold text-brand-400 hover:text-brand-300 hover:bg-slate-800/40 rounded-xl transition-colors">
-                View All Activity Logs →
-              </button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* User Profile & Auth Dropdown */}
         <div className="relative">
@@ -358,8 +373,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* Mobile Search Overlay Bar */}
-      {showMobileSearch && (
+      {/* Mobile Search Overlay Bar (Managers / Admins only) */}
+      {showMobileSearch && isManagerOrAdmin && (
         <div className="absolute top-16 left-0 right-0 p-3 bg-slate-900 border-b border-slate-800 sm:hidden z-40">
           <div className="relative w-full">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
