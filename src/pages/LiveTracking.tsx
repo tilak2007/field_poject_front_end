@@ -19,6 +19,7 @@ import {
 import { LiveGpsMap } from '../components/maps/LiveGpsMap';
 import { gpsApi, type FleetGpsResponse } from '../api/gpsApi';
 import { useAuth } from '../context/AuthContext';
+import { acquireLiveLocation, type GeoLocationResult } from '../utils/geolocation';
 
 export const LiveTracking: React.FC = () => {
   const { user } = useAuth();
@@ -71,56 +72,29 @@ export const LiveTracking: React.FC = () => {
 
   // 3. Attempt silent initial real device geolocation acquisition
   useEffect(() => {
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const lat = Number(pos.coords.latitude.toFixed(6));
-          const lng = Number(pos.coords.longitude.toFixed(6));
-          const accuracy = Math.round(pos.coords.accuracy);
-          setMyCoords({ lat, lng, accuracy });
-        },
-        () => {
-          // If silent prompt fails or user hasn't granted yet, wait for user click
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-    }
+    acquireLiveLocation((loc: GeoLocationResult) => {
+      setMyCoords({ lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy });
+    });
   }, []);
 
   // 4. One-click High-Accuracy Real GPS Locate
   const handleLocateMe = () => {
-    if (!('geolocation' in navigator)) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
     setIsLocating(true);
-    setBroadcastFeedback('Acquiring high-accuracy real-time GPS coordinates...');
-
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    acquireLiveLocation(
+      (loc: GeoLocationResult) => {
         setIsLocating(false);
-        const lat = Number(pos.coords.latitude.toFixed(6));
-        const lng = Number(pos.coords.longitude.toFixed(6));
-        const accuracy = Math.round(pos.coords.accuracy);
-
-        setMyCoords({ lat, lng, accuracy });
+        setMyCoords({ lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy });
         setSelectedRepId('rep-my-device');
         setBroadcastFeedback(
-          `📍 Real Live GPS Locked: ${lat}, ${lng} (±${accuracy}m accuracy). Free OpenStreetMap API Active.`
+          `📍 Real Live GPS Locked: ${loc.lat}, ${loc.lng} (${loc.city || '±' + loc.accuracy + 'm accuracy'}). Free OpenStreetMap API Active.`
         );
-
-        // Also start broadcasting telemetry to fleet
         if (!isBroadcastingDevice) {
           startDeviceBroadcast();
         }
       },
-      (err) => {
-        setIsLocating(false);
-        setBroadcastFeedback(
-          `GPS permission: ${err.message}. Please enable location permissions in browser settings.`
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+      (status) => {
+        setBroadcastFeedback(status);
+      }
     );
   };
 

@@ -37,7 +37,7 @@ export const Products: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
-  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('map');
   const [selectedMapSku, setSelectedMapSku] = useState<string | null>(null);
 
   // Modal and toast states

@@ -10,6 +10,7 @@ import {
   Compass,
 } from 'lucide-react';
 import type { RepLiveTelemetry, GeofencedOutlet } from '../../api/gpsApi';
+import { acquireLiveLocation, type GeoLocationResult } from '../../utils/geolocation';
 
 export interface LiveGpsMapProps {
   reps: RepLiveTelemetry[];
@@ -49,6 +50,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   const [autoFollow, setAutoFollow] = useState(true);
   const [internalLocating, setInternalLocating] = useState(false);
   const [hasInitialCentered, setHasInitialCentered] = useState(false);
+  const [liveGpsLabel, setLiveGpsLabel] = useState<string>('Free Map API Active');
 
   // 100% Free Tile Layers (NO API KEY REQUIRED, NO WATERMARKS)
   const getTileUrl = (type: MapLayerType) => {
@@ -93,7 +95,26 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     tileLayerRef.current = tileLayer;
     mapInstanceRef.current = map;
 
+    // Fix container size on mount to prevent gray/blank screen
+    const timer1 = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    const timer2 = setTimeout(() => {
+      map.invalidateSize();
+    }, 600);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize();
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
     return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      resizeObserver?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -114,6 +135,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
         container.style.filter = 'none';
       }
     }
+    mapInstanceRef.current.invalidateSize();
   }, [mapLayer]);
 
   // 3. Render Geofence Circles around Retailers
@@ -358,6 +380,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
     // Automatically fly to user's real live location on first fix
     if (!hasInitialCentered) {
+      map.invalidateSize();
       map.flyTo([myDeviceCoords.lat, myDeviceCoords.lng], 15, {
         duration: 1.2,
       });
@@ -365,34 +388,27 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     }
   }, [myDeviceCoords, hasInitialCentered]);
 
-  // Handle Locate Me (Browser Geolocation)
+  // Handle Locate Me (Browser Geolocation with multi-tier fallback)
   const handleLocateMeClick = () => {
     if (onLocateMe) {
       onLocateMe();
       return;
     }
 
-    if (!('geolocation' in navigator)) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
-
     setInternalLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    acquireLiveLocation(
+      (loc: GeoLocationResult) => {
         setInternalLocating(false);
-        const lat = Number(pos.coords.latitude.toFixed(6));
-        const lng = Number(pos.coords.longitude.toFixed(6));
         const map = mapInstanceRef.current;
         if (map) {
-          map.flyTo([lat, lng], 16, { duration: 1.2 });
+          map.invalidateSize();
+          map.flyTo([loc.lat, loc.lng], 16, { duration: 1.2 });
         }
+        setLiveGpsLabel(`Real Location: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`);
       },
-      (err) => {
-        setInternalLocating(false);
-        alert(`Location acquisition error: ${err.message}. Please enable location permissions.`);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+      (status) => {
+        setLiveGpsLabel(status);
+      }
     );
   };
 
@@ -400,6 +416,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   const handleCenterOnUser = () => {
     const map = mapInstanceRef.current;
     if (!map) return;
+    map.invalidateSize();
     if (myDeviceCoords) {
       map.flyTo([myDeviceCoords.lat, myDeviceCoords.lng], 16, {
         duration: 1.0,
@@ -415,6 +432,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   const handleZoomOut = () => mapInstanceRef.current?.zoomOut();
   const handleFitAll = () => {
     if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.invalidateSize();
     const allCoords: [number, number][] = reps.map((r) => [
       r.coords.lat,
       r.coords.lng,
@@ -434,9 +452,13 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   const locatingActive = isLocating || internalLocating;
 
   return (
-    <div className="relative w-full h-full min-h-[520px] rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-950 shadow-2xl">
+    <div className="relative w-full h-[520px] min-h-[520px] rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-950 shadow-2xl">
       {/* Map Container */}
-      <div ref={mapContainerRef} className="w-full h-full min-h-[520px] z-0" />
+      <div
+        ref={mapContainerRef}
+        style={{ width: '100%', height: '520px', minHeight: '520px' }}
+        className="w-full h-[520px] z-0"
+      />
 
       {/* Floating Top Controls HUD */}
       <div className="absolute top-4 left-4 z-[500] flex flex-wrap items-center gap-2">
@@ -480,7 +502,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
         {/* Free Map API Badge */}
         <div className="hidden sm:flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-emerald-500/30 text-[11px] font-semibold text-emerald-400 shadow-lg">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span>Free OpenStreetMap API</span>
+          <span>Free OpenStreetMap API (Direct Browser GPS)</span>
         </div>
       </div>
 
@@ -584,7 +606,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
         {/* Free Map Attribution Badge */}
         <div className="bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-slate-400">
-          <span>Map tiles © </span>
+          <span>{liveGpsLabel} • Map tiles © </span>
           <a
             href="https://www.openstreetmap.org/copyright"
             target="_blank"
@@ -593,7 +615,6 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
           >
             OpenStreetMap
           </a>
-          <span> contributors (Free)</span>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   Package,
 } from 'lucide-react';
 import type { Product } from '../../types';
+import { acquireLiveLocation, type GeoLocationResult } from '../../utils/geolocation';
 
 interface ProductStockMapProps {
   products: Product[];
@@ -52,8 +53,12 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     accuracy?: number;
   } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
-  const [locationStatus, setLocationStatus] = useState<string>('Requesting real GPS...');
-  const [activeSku, setActiveSku] = useState<string>(selectedSku || (products[0]?.sku ?? ''));
+  const [locationStatus, setLocationStatus] = useState<string>(
+    'Detecting your live device GPS location...'
+  );
+  const [activeSku, setActiveSku] = useState<string>(
+    selectedSku || (products[0]?.sku ?? '')
+  );
   const [outlets, setOutlets] = useState<OutletStockInfo[]>([]);
 
   // 100% Free Tile Layer URLs (NO API KEY, NO WATERMARK)
@@ -72,21 +77,60 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   };
 
   // Generate or align sample retail outlets around the given center point
-  const generateOutletsNear = (centerLat: number, centerLng: number, prds: Product[]): OutletStockInfo[] => {
+  const generateOutletsNear = (
+    centerLat: number,
+    centerLng: number,
+    prds: Product[]
+  ): OutletStockInfo[] => {
     const offsets = [
-      { dLat: 0.0065, dLng: 0.0072, name: 'Metro Supermart & Groceries', owner: 'Ramesh Gupta', type: 'Supermarket' },
-      { dLat: -0.0052, dLng: 0.0061, name: 'Shree Krishna Daily Provisions', owner: 'Gopal Krishna', type: 'Kirana' },
-      { dLat: 0.0088, dLng: -0.0049, name: 'Royal Wholesale Depot', owner: 'Amrit Singh', type: 'Wholesale' },
-      { dLat: -0.0074, dLng: -0.0083, name: 'City Center Mega Store', owner: 'Sunil Verma', type: 'Supermarket' },
-      { dLat: 0.0025, dLng: -0.0095, name: 'Balaji Express Mart', owner: 'Rajesh Tyagi', type: 'Kirana' },
-      { dLat: -0.0031, dLng: 0.0038, name: 'Apex FMCG Distribution Hub', owner: 'Vikram Mehta', type: 'Depot' },
+      {
+        dLat: 0.0055,
+        dLng: 0.0062,
+        name: 'Metro Supermart & Groceries',
+        owner: 'Ramesh Gupta',
+        type: 'Supermarket',
+      },
+      {
+        dLat: -0.0042,
+        dLng: 0.0051,
+        name: 'Shree Krishna Daily Provisions',
+        owner: 'Gopal Krishna',
+        type: 'Kirana',
+      },
+      {
+        dLat: 0.0078,
+        dLng: -0.0041,
+        name: 'Royal Wholesale Depot',
+        owner: 'Amrit Singh',
+        type: 'Wholesale',
+      },
+      {
+        dLat: -0.0064,
+        dLng: -0.0073,
+        name: 'City Center Mega Store',
+        owner: 'Sunil Verma',
+        type: 'Supermarket',
+      },
+      {
+        dLat: 0.0021,
+        dLng: -0.0085,
+        name: 'Balaji Express Mart',
+        owner: 'Rajesh Tyagi',
+        type: 'Kirana',
+      },
+      {
+        dLat: -0.0028,
+        dLng: 0.0032,
+        name: 'Apex FMCG Distribution Hub',
+        owner: 'Vikram Mehta',
+        type: 'Depot',
+      },
     ];
 
     return offsets.map((o, idx) => {
       const stockMap: Record<string, number> = {};
       prds.forEach((p, pIdx) => {
-        // Deterministic realistic stock quantity
-        stockMap[p.sku] = Math.max(5, ((idx * 7 + pIdx * 13) % 45) + 5);
+        stockMap[p.sku] = Math.max(5, ((idx * 7 + pIdx * 13) % 45) + 8);
       });
 
       return {
@@ -94,7 +138,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
         name: o.name,
         owner: o.owner,
         phone: `+91 9810${idx} 78${idx}10`,
-        address: `Shop #${12 + idx * 4}, Sector Road`,
+        address: `Shop #${12 + idx * 4}, Sector Market`,
         lat: Number((centerLat + o.dLat).toFixed(6)),
         lng: Number((centerLng + o.dLng).toFixed(6)),
         stockMap,
@@ -104,7 +148,12 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   };
 
   // Calculate Haversine distance in km
-  const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const getDistanceKm = (
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number
+  ) => {
     const R = 6371; // Earth radius in km
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -123,7 +172,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    const defaultCenter: [number, number] = [28.6139, 77.209]; // Default fallback
+    const defaultCenter: [number, number] = [28.6139, 77.209];
     const map = L.map(mapContainerRef.current, {
       center: defaultCenter,
       zoom: 13,
@@ -141,10 +190,29 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     tileLayerRef.current = tileLayer;
     mapInstanceRef.current = map;
 
-    // Immediately acquire Real Live Location
+    // Immediately trigger invalidateSize on intervals to guarantee full tile coverage
+    const timer1 = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    const timer2 = setTimeout(() => {
+      map.invalidateSize();
+    }, 600);
+
+    let resizeObserver: ResizeObserver | null = null;
+    if (mapContainerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        map.invalidateSize();
+      });
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    // Immediately acquire Real Live Location with fallback
     acquireRealLocation(map);
 
     return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      resizeObserver?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
@@ -164,46 +232,34 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
         container.style.filter = 'none';
       }
     }
+    mapInstanceRef.current.invalidateSize();
   }, [mapLayer]);
 
-  // Acquire Real Live Location via browser GPS
+  // Acquire Real Live Location via browser GPS + IP fallback
   const acquireRealLocation = (map?: L.Map | null) => {
     const targetMap = map || mapInstanceRef.current;
-    if (!('geolocation' in navigator)) {
-      setLocationStatus('GPS not supported in browser');
-      // Set default outlets
-      setOutlets(generateOutletsNear(28.6139, 77.209, products));
-      return;
-    }
-
     setIsLocating(true);
-    setLocationStatus('Acquiring real-time satellite GPS fix...');
 
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    acquireLiveLocation(
+      (loc: GeoLocationResult) => {
         setIsLocating(false);
-        const lat = Number(pos.coords.latitude.toFixed(6));
-        const lng = Number(pos.coords.longitude.toFixed(6));
-        const accuracy = Math.round(pos.coords.accuracy);
-
-        setUserCoords({ lat, lng, accuracy });
-        setLocationStatus(`📍 Real Live GPS locked: ${lat}, ${lng} (±${accuracy}m)`);
+        setUserCoords({ lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy });
+        setLocationStatus(
+          `📍 Real Location Locked: ${loc.lat}, ${loc.lng} (${loc.city || 'Verified Device GPS'})`
+        );
 
         // Generate outlets surrounding the user's real location!
-        const localOutlets = generateOutletsNear(lat, lng, products);
+        const localOutlets = generateOutletsNear(loc.lat, loc.lng, products);
         setOutlets(localOutlets);
 
         if (targetMap) {
-          targetMap.flyTo([lat, lng], 14, { duration: 1.2 });
+          targetMap.invalidateSize();
+          targetMap.flyTo([loc.lat, loc.lng], 14, { duration: 1.2 });
         }
       },
-      (err) => {
-        setIsLocating(false);
-        setLocationStatus(`GPS permission deferred: ${err.message}. Showing territory hubs.`);
-        // Fallback default territory outlets
-        setOutlets(generateOutletsNear(28.6139, 77.209, products));
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
+      (statusMsg) => {
+        setLocationStatus(statusMsg);
+      }
     );
   };
 
@@ -279,7 +335,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
               : ''
           }
           <div style="margin-top: 6px; padding: 3px 8px; border-radius: 6px; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; text-align: center; border: 1px solid #bfdbfe;">
-            ✓ 100% Free OpenStreetMap API
+            ✓ 100% Free OpenStreetMap API (Direct Browser GPS)
           </div>
         </div>
       `)
@@ -297,13 +353,15 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     outletMarkersRef.current.forEach((m) => m.remove());
     outletMarkersRef.current = [];
 
-    const currentProduct = products.find((p) => p.sku === activeSku) || products[0];
+    const currentProduct =
+      products.find((p) => p.sku === activeSku) || products[0];
 
     outlets.forEach((outlet) => {
-      const stock = currentProduct ? outlet.stockMap[currentProduct.sku] || 0 : 15;
+      const stock = currentProduct
+        ? outlet.stockMap[currentProduct.sku] || 0
+        : 15;
       const isStockGood = stock > 20;
 
-      // Distance from user if live GPS available
       const distance = userCoords
         ? getDistanceKm(userCoords.lat, userCoords.lng, outlet.lat, outlet.lng)
         : null;
@@ -375,6 +433,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   // Center on user GPS
   const handleCenterUser = () => {
     if (userCoords && mapInstanceRef.current) {
+      mapInstanceRef.current.invalidateSize();
       mapInstanceRef.current.flyTo([userCoords.lat, userCoords.lng], 15, {
         duration: 1.0,
       });
@@ -388,6 +447,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   const handleZoomOut = () => mapInstanceRef.current?.zoomOut();
   const handleFitAll = () => {
     if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.invalidateSize();
     const allCoords: [number, number][] = outlets.map((o) => [o.lat, o.lng]);
     if (userCoords) allCoords.push([userCoords.lat, userCoords.lng]);
 
@@ -397,7 +457,8 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     }
   };
 
-  const selectedProductObj = products.find((p) => p.sku === activeSku) || products[0];
+  const selectedProductObj =
+    products.find((p) => p.sku === activeSku) || products[0];
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -413,11 +474,11 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
                 LIVE OUTLET & STOCK RADAR
               </span>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                FREE MAP API
+                100% FREE MAP API
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Real-time product stock levels mapped across nearby retail stores with live device GPS distance.
+              Powered by OpenStreetMap. No Supabase or Backend required—connects directly to browser GPS.
             </p>
           </div>
         </div>
@@ -444,9 +505,13 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
         </div>
       </div>
 
-      {/* Map Canvas Container */}
-      <div className="relative w-full h-[540px] rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-950 shadow-2xl">
-        <div ref={mapContainerRef} className="w-full h-full z-0" />
+      {/* Map Canvas Container with Explicit Height to guarantee rendering */}
+      <div className="relative w-full h-[540px] min-h-[540px] rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-950 shadow-2xl">
+        <div
+          ref={mapContainerRef}
+          style={{ width: '100%', height: '540px', minHeight: '540px' }}
+          className="w-full h-[540px] z-0"
+        />
 
         {/* Floating Top Left Badge */}
         <div className="absolute top-4 left-4 z-[500] flex flex-wrap items-center gap-2">
@@ -578,6 +643,18 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
             </a>
             <span> contributors (Free API)</span>
           </div>
+        </div>
+      </div>
+
+      {/* Info Status Banner */}
+      <div className="p-3.5 bg-slate-900/80 border border-slate-800 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+          <span className="font-bold text-white">Map API Connected:</span>
+          <span className="text-emerald-400 font-semibold">OpenStreetMap Public Tiles (100% Free)</span>
+        </div>
+        <div className="text-[11px] text-slate-400">
+          ✓ Runs directly in browser via GPS hardware • No Supabase or Backend connection required
         </div>
       </div>
     </div>

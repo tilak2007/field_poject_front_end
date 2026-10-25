@@ -49,6 +49,25 @@
   box-shadow: 0 12px 30px -10px rgba(79, 107, 246, 0.25);
 }
 
+/* Leaflet Map Container & Tile Layer Fixes */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 480px;
+  background-color: #0f172a !important;
+  z-index: 10;
+}
+.leaflet-tile {
+  visibility: inherit !important;
+}
+.leaflet-pane {
+  z-index: 400 !important;
+}
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000 !important;
+}
+
 /* Radar Animation */
 @keyframes radar-sweep {
   0% { transform: rotate(0deg); }
