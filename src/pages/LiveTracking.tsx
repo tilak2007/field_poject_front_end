@@ -14,6 +14,7 @@ import {
   Gauge,
   Users,
   Search,
+  Crosshair,
 } from 'lucide-react';
 import { LiveGpsMap } from '../components/maps/LiveGpsMap';
 import { gpsApi, type FleetGpsResponse } from '../api/gpsApi';
@@ -31,8 +32,9 @@ export const LiveTracking: React.FC = () => {
   const [showGeofences, setShowGeofences] = useState(true);
   const [showTrails, setShowTrails] = useState(true);
 
-  // Real Device GPS broadcast state
+  // Real Device GPS state
   const [isBroadcastingDevice, setIsBroadcastingDevice] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
   const [myCoords, setMyCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
   const [broadcastFeedback, setBroadcastFeedback] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
@@ -43,7 +45,9 @@ export const LiveTracking: React.FC = () => {
       const data = await gpsApi.getLiveFleet();
       if (data && data.success) {
         setFleetData(data);
-        setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+        setLastRefreshed(
+          new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+        );
       }
     } catch (err) {
       console.warn('Live fleet telemetry poll notice:', err);
@@ -65,29 +69,66 @@ export const LiveTracking: React.FC = () => {
     return () => clearInterval(interval);
   }, [isSimulating]);
 
-  // 3. Device Geolocation Broadcasting Toggle
-  const toggleDeviceBroadcast = () => {
-    if (isBroadcastingDevice) {
-      // Turn off
-      if (watchIdRef.current !== null) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-        watchIdRef.current = null;
-      }
-      setIsBroadcastingDevice(false);
-      setMyCoords(null);
-      setBroadcastFeedback('Live device GPS broadcast paused');
-      setTimeout(() => setBroadcastFeedback(null), 3000);
-      return;
+  // 3. Attempt silent initial real device geolocation acquisition
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(6));
+          const lng = Number(pos.coords.longitude.toFixed(6));
+          const accuracy = Math.round(pos.coords.accuracy);
+          setMyCoords({ lat, lng, accuracy });
+        },
+        () => {
+          // If silent prompt fails or user hasn't granted yet, wait for user click
+        },
+        { enableHighAccuracy: true, timeout: 6000 }
+      );
     }
+  }, []);
 
+  // 4. One-click High-Accuracy Real GPS Locate
+  const handleLocateMe = () => {
     if (!('geolocation' in navigator)) {
       alert('Geolocation is not supported by your browser.');
       return;
     }
+    setIsLocating(true);
+    setBroadcastFeedback('Acquiring high-accuracy real-time GPS coordinates...');
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        const accuracy = Math.round(pos.coords.accuracy);
+
+        setMyCoords({ lat, lng, accuracy });
+        setSelectedRepId('rep-my-device');
+        setBroadcastFeedback(
+          `📍 Real Live GPS Locked: ${lat}, ${lng} (±${accuracy}m accuracy). Free OpenStreetMap API Active.`
+        );
+
+        // Also start broadcasting telemetry to fleet
+        if (!isBroadcastingDevice) {
+          startDeviceBroadcast();
+        }
+      },
+      (err) => {
+        setIsLocating(false);
+        setBroadcastFeedback(
+          `GPS permission: ${err.message}. Please enable location permissions in browser settings.`
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // 5. Device Geolocation Broadcasting Toggle
+  const startDeviceBroadcast = () => {
+    if (!('geolocation' in navigator)) return;
 
     setIsBroadcastingDevice(true);
-    setBroadcastFeedback('Acquiring high-accuracy satellite GPS fix...');
-
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (pos) => {
         const lat = Number(pos.coords.latitude.toFixed(6));
@@ -95,9 +136,10 @@ export const LiveTracking: React.FC = () => {
         const accuracy = Math.round(pos.coords.accuracy);
 
         setMyCoords({ lat, lng, accuracy });
-        setBroadcastFeedback(`GPS locked: ±${accuracy}m accuracy. Transmitting coordinates to fleet radar...`);
+        setBroadcastFeedback(
+          `📡 Real GPS Locked: ${lat}, ${lng} (±${accuracy}m). Broadcasting live to fleet radar...`
+        );
 
-        // Send GPS ping to backend
         try {
           const res = await gpsApi.broadcastDevicePing({
             repId: user?.id || 'rep-my-device',
@@ -128,6 +170,20 @@ export const LiveTracking: React.FC = () => {
         timeout: 10000,
       }
     );
+  };
+
+  const toggleDeviceBroadcast = () => {
+    if (isBroadcastingDevice) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsBroadcastingDevice(false);
+      setBroadcastFeedback('Live device GPS broadcast paused');
+      setTimeout(() => setBroadcastFeedback(null), 3000);
+    } else {
+      startDeviceBroadcast();
+    }
   };
 
   // Clean up geolocation watch on unmount
@@ -169,7 +225,25 @@ export const LiveTracking: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const selectedRep = reps.find((r) => r.id === selectedRepId) || reps[0] || allReps[0];
+  const isMyDeviceSelected = selectedRepId === 'rep-my-device' && myCoords !== null;
+
+  const currentDisplayRep = isMyDeviceSelected
+    ? {
+        id: 'rep-my-device',
+        name: `${user?.name || 'You'} (Your Real Live GPS)`,
+        code: 'LIVE-GPS-USER',
+        territory: user?.territory || 'Real-Time Device Telemetry',
+        avatar:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        phone: user?.email || '+91 99999 88888',
+        batteryLevel: 98,
+        speedKmH: 0,
+        distanceTodayKm: 0.1,
+        status: 'Moving' as const,
+        lastPingTime: new Date().toISOString(),
+        coords: { lat: myCoords.lat, lng: myCoords.lng },
+      }
+    : reps.find((r) => r.id === selectedRepId) || reps[0] || allReps[0];
 
   return (
     <motion.div
@@ -194,11 +268,16 @@ export const LiveTracking: React.FC = () => {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                   {isRep ? 'PERSONAL TELEMETRY' : 'LIVE TELEMETRY'}
                 </span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 text-[10px] font-bold">
+                  FREE MAP API
+                </span>
               </div>
               <p className="text-xs text-slate-400 mt-0.5">
                 {isRep
-                  ? `Real-time satellite positioning and route tracking for ${user?.name || 'Vikram Sharma'} (${user?.territory || 'North Delhi Beat A'}). Confidential sales rep tracking.`
-                  : 'Real-time satellite positioning, speed telemetry, automated geofence entry/exit detection, and breadcrumb route tracking.'}
+                  ? `Real-time satellite positioning and route tracking for ${
+                      user?.name || 'Vikram Sharma'
+                    } (${user?.territory || 'North Delhi Beat A'}). Confidential sales rep tracking.`
+                  : 'Real-time satellite positioning, speed telemetry, automated geofence detection, and live breadcrumb route tracking powered by OpenStreetMap.'}
               </p>
             </div>
           </div>
@@ -209,7 +288,7 @@ export const LiveTracking: React.FC = () => {
           {/* Layer toggles */}
           <button
             onClick={() => setShowTrails(!showTrails)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
               showTrails
                 ? 'bg-sky-500/20 text-sky-400 border-sky-500/30'
                 : 'bg-slate-800/80 text-slate-400 border-slate-700'
@@ -220,7 +299,7 @@ export const LiveTracking: React.FC = () => {
 
           <button
             onClick={() => setShowGeofences(!showGeofences)}
-            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
               showGeofences
                 ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                 : 'bg-slate-800/80 text-slate-400 border-slate-700'
@@ -229,23 +308,43 @@ export const LiveTracking: React.FC = () => {
             Geofences: {showGeofences ? 'ON' : 'OFF'}
           </button>
 
+          {/* Real Device High Accuracy Locate Button */}
+          <button
+            onClick={handleLocateMe}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer border ${
+              myCoords
+                ? 'bg-blue-600 text-white shadow-blue-500/30 border-blue-400'
+                : 'bg-slate-800 text-blue-400 hover:bg-slate-700 border-slate-700'
+            }`}
+            title="Acquire real device GPS coordinates"
+          >
+            <Crosshair className={`w-4 h-4 ${isLocating ? 'animate-spin' : ''}`} />
+            <span>
+              {isLocating
+                ? 'Locking GPS...'
+                : myCoords
+                ? 'Real Live GPS: LOCKED'
+                : 'Lock Real Live GPS'}
+            </span>
+          </button>
+
           {/* Real Device Broadcast Toggle */}
           <button
             onClick={toggleDeviceBroadcast}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer ${
               isBroadcastingDevice
-                ? 'bg-blue-600 text-white shadow-blue-500/30 border border-blue-400 animate-pulse'
+                ? 'bg-emerald-600 text-white shadow-emerald-500/30 border border-emerald-400 animate-pulse'
                 : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
             }`}
           >
             <Compass className={`w-4 h-4 ${isBroadcastingDevice ? 'animate-spin' : ''}`} />
-            <span>{isBroadcastingDevice ? 'Broadcasting GPS (Active)' : 'Broadcast Device GPS'}</span>
+            <span>{isBroadcastingDevice ? 'Broadcasting GPS (Active)' : 'Broadcast GPS'}</span>
           </button>
 
           {/* Simulation Toggle */}
           <button
             onClick={() => setIsSimulating(!isSimulating)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
               isSimulating
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                 : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-white'
@@ -259,7 +358,7 @@ export const LiveTracking: React.FC = () => {
           {/* Manual Refresh */}
           <button
             onClick={fetchFleetTelemetry}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 rounded-xl transition-all text-xs"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 rounded-xl transition-all text-xs cursor-pointer"
             title="Force refresh telemetry"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -351,38 +450,41 @@ export const LiveTracking: React.FC = () => {
               myDeviceCoords={myCoords}
               showTrails={showTrails}
               showGeofences={showGeofences}
+              onLocateMe={handleLocateMe}
+              isLocating={isLocating}
             />
           </div>
 
           {/* Selected Rep Telemetry Detail Banner */}
-          {selectedRep && (
+          {currentDisplayRep && (
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={selectedRep.avatar}
-                  alt={selectedRep.name}
+                  src={currentDisplayRep.avatar}
+                  alt={currentDisplayRep.name}
                   className="w-11 h-11 rounded-2xl object-cover border-2 border-brand-500 shadow-md"
                 />
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-sm">{selectedRep.name}</span>
+                    <span className="font-bold text-white text-sm">{currentDisplayRep.name}</span>
                     <span className="font-mono text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
-                      {selectedRep.code}
+                      {currentDisplayRep.code}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        selectedRep.status === 'At Store'
+                        currentDisplayRep.status === 'At Store'
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                          : selectedRep.status === 'Moving'
+                          : currentDisplayRep.status === 'Moving'
                           ? 'bg-sky-500/20 text-sky-400 border border-sky-500/30'
                           : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                       }`}
                     >
-                      {selectedRep.status}
+                      {currentDisplayRep.status}
                     </span>
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {selectedRep.territory} • Last Ping: {new Date(selectedRep.lastPingTime).toLocaleTimeString()}
+                    {currentDisplayRep.territory} • Last Ping:{' '}
+                    {new Date(currentDisplayRep.lastPingTime).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
@@ -392,27 +494,31 @@ export const LiveTracking: React.FC = () => {
                 <div className="text-center px-3 py-1 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-normal">GPS Coords</span>
                   <span className="font-mono text-slate-200">
-                    {selectedRep.coords.lat}, {selectedRep.coords.lng}
+                    {currentDisplayRep.coords.lat}, {currentDisplayRep.coords.lng}
                   </span>
                 </div>
 
                 <div className="text-center px-3 py-1 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-normal">Speed</span>
-                  <span className="font-mono text-sky-400 font-bold">{selectedRep.speedKmH} km/h</span>
+                  <span className="font-mono text-sky-400 font-bold">{currentDisplayRep.speedKmH} km/h</span>
                 </div>
 
                 <div className="text-center px-3 py-1 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-normal">Distance Today</span>
-                  <span className="font-mono text-emerald-400 font-bold">{selectedRep.distanceTodayKm} km</span>
+                  <span className="font-mono text-emerald-400 font-bold">
+                    {currentDisplayRep.distanceTodayKm} km
+                  </span>
                 </div>
 
                 <div className="text-center px-3 py-1 bg-slate-950/60 rounded-xl border border-slate-800">
                   <span className="text-[10px] text-slate-400 block font-normal">Battery</span>
-                  <span className="font-mono text-amber-400 font-bold">{selectedRep.batteryLevel}%</span>
+                  <span className="font-mono text-amber-400 font-bold">
+                    {currentDisplayRep.batteryLevel}%
+                  </span>
                 </div>
 
                 <a
-                  href={`tel:${selectedRep.phone}`}
+                  href={`tel:${currentDisplayRep.phone}`}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold transition-all shadow-md"
                 >
                   <Phone className="w-3.5 h-3.5" />
@@ -454,7 +560,7 @@ export const LiveTracking: React.FC = () => {
                 <button
                   key={tab}
                   onClick={() => setStatusFilter(tab)}
-                  className={`py-1 rounded-lg transition-all ${
+                  className={`py-1 rounded-lg transition-all cursor-pointer ${
                     statusFilter === tab
                       ? 'bg-brand-600 text-white shadow-sm'
                       : 'text-slate-400 hover:text-white'
@@ -467,6 +573,46 @@ export const LiveTracking: React.FC = () => {
 
             {/* Reps Scrollable Roster */}
             <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+              {/* Highlighted Real Live Device GPS Entry */}
+              {myCoords && (
+                <div
+                  onClick={() => setSelectedRepId('rep-my-device')}
+                  className={`p-3 rounded-xl border transition-all cursor-pointer shadow-md ${
+                    selectedRepId === 'rep-my-device'
+                      ? 'bg-blue-900/60 border-blue-400 ring-1 ring-blue-400/50'
+                      : 'bg-blue-950/40 border-blue-500/50 hover:bg-blue-900/40'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative">
+                        <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-inner">
+                          📍
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 w-3 h-3 rounded-full bg-emerald-400 border-2 border-slate-950 animate-ping" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <span>{user?.name || 'You'} (Live Device)</span>
+                          <span className="text-[9px] bg-blue-500/30 text-blue-300 px-1.5 py-0.5 rounded font-mono font-bold">
+                            REAL GPS
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-blue-300/80 font-mono">
+                          {myCoords.lat.toFixed(4)}, {myCoords.lng.toFixed(4)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        ±{myCoords.accuracy || 10}m
+                      </span>
+                      <div className="text-[10px] text-emerald-400 font-bold mt-1">Live Locked</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {filteredReps.map((rep) => {
                 const isSelected = selectedRepId === rep.id;
                 return (
@@ -533,7 +679,9 @@ export const LiveTracking: React.FC = () => {
                             rep.currentRetailer.insideGeofence ? 'text-emerald-400' : 'text-slate-400'
                           }`}
                         >
-                          {rep.currentRetailer.insideGeofence ? 'Inside (38m)' : `${rep.currentRetailer.distanceMeters}m away`}
+                          {rep.currentRetailer.insideGeofence
+                            ? 'Inside (38m)'
+                            : `${rep.currentRetailer.distanceMeters}m away`}
                         </span>
                       </div>
                     )}

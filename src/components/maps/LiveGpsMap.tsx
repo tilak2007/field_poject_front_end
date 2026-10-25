@@ -7,10 +7,11 @@ import {
   ZoomOut,
   Maximize2,
   Radio,
+  Compass,
 } from 'lucide-react';
 import type { RepLiveTelemetry, GeofencedOutlet } from '../../api/gpsApi';
 
-interface LiveGpsMapProps {
+export interface LiveGpsMapProps {
   reps: RepLiveTelemetry[];
   geofencedOutlets: GeofencedOutlet[];
   selectedRepId: string | null;
@@ -18,9 +19,11 @@ interface LiveGpsMapProps {
   myDeviceCoords?: { lat: number; lng: number; accuracy?: number } | null;
   showTrails?: boolean;
   showGeofences?: boolean;
+  onLocateMe?: () => void;
+  isLocating?: boolean;
 }
 
-type MapLayerType = 'streets' | 'satellite' | 'dark';
+export type MapLayerType = 'streets' | 'satellite' | 'dark' | 'humanitarian';
 
 export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   reps,
@@ -30,6 +33,8 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   myDeviceCoords,
   showTrails = true,
   showGeofences = true,
+  onLocateMe,
+  isLocating = false,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -42,28 +47,34 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
   const [mapLayer, setMapLayer] = useState<MapLayerType>('streets');
   const [autoFollow, setAutoFollow] = useState(true);
+  const [internalLocating, setInternalLocating] = useState(false);
+  const [hasInitialCentered, setHasInitialCentered] = useState(false);
 
-  // Tile layers definition
+  // 100% Free Tile Layers (NO API KEY REQUIRED, NO WATERMARKS)
   const getTileUrl = (type: MapLayerType) => {
     switch (type) {
       case 'satellite':
         return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+      case 'humanitarian':
+        return 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
       case 'dark':
-        return 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
       case 'streets':
       default:
-        return 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+        // OpenStreetMap Standard - 100% Free Public Map Server
+        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
     }
   };
 
-  // 1. Initialize Map
+  // 1. Initialize Leaflet Map
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    // Center on Delhi-NCR default territory
-    const initialCenter: [number, number] = [28.685, 77.145];
-    const initialZoom = 12;
+    // Center on default territory or user coords if already available
+    const initialCenter: [number, number] = myDeviceCoords
+      ? [myDeviceCoords.lat, myDeviceCoords.lng]
+      : [28.685, 77.145];
+    const initialZoom = myDeviceCoords ? 15 : 12;
 
     const map = L.map(mapContainerRef.current, {
       center: initialCenter,
@@ -74,7 +85,9 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
     const tileLayer = L.tileLayer(getTileUrl('streets'), {
       maxZoom: 19,
-      subdomains: 'abcd',
+      subdomains: 'abc',
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
     }).addTo(map);
 
     tileLayerRef.current = tileLayer;
@@ -86,10 +99,21 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     };
   }, []);
 
-  // 2. Change Tile Layer Style
+  // 2. Change Tile Layer Style & Dark Filter (Zero Watermark Free Layer)
   useEffect(() => {
     if (!mapInstanceRef.current || !tileLayerRef.current) return;
     tileLayerRef.current.setUrl(getTileUrl(mapLayer));
+
+    // Apply dark mode CSS inversion filter on standard OSM tiles for clean dark theme without Carto watermark
+    const container = tileLayerRef.current.getContainer();
+    if (container) {
+      if (mapLayer === 'dark') {
+        container.style.filter =
+          'invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%)';
+      } else {
+        container.style.filter = 'none';
+      }
+    }
   }, [mapLayer]);
 
   // 3. Render Geofence Circles around Retailers
@@ -117,15 +141,17 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
       const storeIcon = L.divIcon({
         className: 'custom-store-pin',
         html: `
-          <div style="background-color: #047857; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); border: 2px solid white; font-size: 10px; font-weight: bold;">
+          <div style="background-color: #047857; color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); border: 2px solid white; font-size: 11px; font-weight: bold;">
             🏪
           </div>
         `,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
       });
 
-      const storeMarker = L.marker([outlet.coords.lat, outlet.coords.lng], { icon: storeIcon })
+      const storeMarker = L.marker([outlet.coords.lat, outlet.coords.lng], {
+        icon: storeIcon,
+      })
         .bindPopup(`
           <div style="font-family: inherit; padding: 4px;">
             <div style="font-weight: 800; color: #0f172a; font-size: 13px;">${outlet.name}</div>
@@ -169,7 +195,11 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
       const isAtStore = rep.status === 'At Store';
 
       // Status indicator color
-      const statusColor = isAtStore ? '#10b981' : isMoving ? '#0284c7' : '#f59e0b';
+      const statusColor = isAtStore
+        ? '#10b981'
+        : isMoving
+        ? '#0284c7'
+        : '#f59e0b';
 
       // Custom animated HTML Marker
       const customIcon = L.divIcon({
@@ -180,7 +210,9 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
             <div style="position: absolute; top: -6px; left: -6px; width: 44px; height: 44px; border-radius: 50%; background: ${statusColor}33; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
             
             <!-- Avatar Circle -->
-            <div style="position: relative; width: 32px; height: 32px; border-radius: 50%; border: 3px solid ${isSelected ? '#fbbf24' : 'white'}; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden; background: #1e293b;">
+            <div style="position: relative; width: 32px; height: 32px; border-radius: 50%; border: 3px solid ${
+              isSelected ? '#fbbf24' : 'white'
+            }; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden; background: #1e293b;">
               <img src="${rep.avatar}" style="width: 100%; height: 100%; object-fit: cover;" alt="${rep.name}" />
             </div>
 
@@ -203,7 +235,9 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
         markersRef.current[rep.id].setIcon(customIcon);
       } else {
         // Create new marker
-        const marker = L.marker([rep.coords.lat, rep.coords.lng], { icon: customIcon })
+        const marker = L.marker([rep.coords.lat, rep.coords.lng], {
+          icon: customIcon,
+        })
           .on('click', () => {
             onSelectRep(rep.id);
           })
@@ -214,7 +248,9 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
       // Draw Daily GPS Breadcrumb Trail if enabled or if rep is selected
       if (showTrails && rep.dailyTrail && rep.dailyTrail.length > 1) {
-        const trailPoints = rep.dailyTrail.map((t) => [t.lat, t.lng] as [number, number]);
+        const trailPoints = rep.dailyTrail.map(
+          (t) => [t.lat, t.lng] as [number, number]
+        );
         trailPoints.push([rep.coords.lat, rep.coords.lng]);
 
         const polyline = L.polyline(trailPoints, {
@@ -232,12 +268,15 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     if (autoFollow && selectedRepId && markersRef.current[selectedRepId]) {
       const selectedRep = reps.find((r) => r.id === selectedRepId);
       if (selectedRep) {
-        map.panTo([selectedRep.coords.lat, selectedRep.coords.lng], { animate: true, duration: 0.8 });
+        map.panTo([selectedRep.coords.lat, selectedRep.coords.lng], {
+          animate: true,
+          duration: 0.8,
+        });
       }
     }
   }, [reps, selectedRepId, showTrails, autoFollow, onSelectRep]);
 
-  // 5. Render Real Device GPS Coords
+  // 5. Render Real Live Device GPS Coordinates with Pulsing Radar
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -253,58 +292,146 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
     if (!myDeviceCoords) return;
 
-    // Accuracy Circle
+    // High-accuracy GPS circle
     if (myDeviceCoords.accuracy) {
       const circle = L.circle([myDeviceCoords.lat, myDeviceCoords.lng], {
         radius: myDeviceCoords.accuracy,
-        color: '#3b82f6',
-        weight: 1,
+        color: '#2563eb',
+        weight: 1.5,
         fillColor: '#3b82f6',
         fillOpacity: 0.15,
       }).addTo(map);
       myAccuracyCircleRef.current = circle;
     }
 
-    // Glowing User Device Marker
+    // Glowing Real Live Location User Pin
     const deviceIcon = L.divIcon({
       className: 'custom-my-device-marker',
       html: `
-        <div style="position: relative; width: 22px; height: 22px;">
-          <div style="position: absolute; top: -7px; left: -7px; width: 36px; height: 36px; border-radius: 50%; background: #3b82f655; animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-          <div style="width: 22px; height: 22px; border-radius: 50%; background: #2563eb; border: 3px solid white; box-shadow: 0 0 10px rgba(37,99,235,0.8);"></div>
+        <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+          <!-- Multi-ring pulsing radar wave -->
+          <div style="position: absolute; top: -8px; left: -8px; width: 44px; height: 44px; border-radius: 50%; background: rgba(37, 99, 235, 0.35); animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          
+          <!-- Outer core -->
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: #2563eb; border: 3px solid white; box-shadow: 0 0 16px rgba(37,99,235,0.9); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: bold;">
+            📍
+          </div>
+          
+          <!-- Live Position Badge -->
+          <div style="margin-top: 3px; background: #1e3a8a; color: white; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; white-space: nowrap; border: 1px solid rgba(255,255,255,0.4); box-shadow: 0 2px 6px rgba(0,0,0,0.4); letter-spacing: 0.02em;">
+            YOU ARE HERE (REAL GPS)
+          </div>
         </div>
       `,
-      iconSize: [22, 22],
-      iconAnchor: [11, 11],
+      iconSize: [140, 56],
+      iconAnchor: [70, 28],
     });
 
-    const marker = L.marker([myDeviceCoords.lat, myDeviceCoords.lng], { icon: deviceIcon })
+    const marker = L.marker([myDeviceCoords.lat, myDeviceCoords.lng], {
+      icon: deviceIcon,
+      zIndexOffset: 1000,
+    })
       .bindPopup(`
-        <div style="font-family: inherit; font-size: 12px; font-weight: bold; color: #1e3a8a;">
-          📍 Your Device Live GPS<br/>
-          <span style="font-size: 10px; font-weight: normal; color: #475569;">
-            Lat: ${myDeviceCoords.lat.toFixed(5)}, Lng: ${myDeviceCoords.lng.toFixed(5)}
-          </span>
+        <div style="font-family: inherit; padding: 6px; min-width: 180px;">
+          <div style="font-weight: 800; color: #1e3a8a; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+            <span>📍 Real Device Live Location</span>
+          </div>
+          <div style="font-size: 11px; color: #334155; margin-top: 4px;">
+            Lat: <b>${myDeviceCoords.lat.toFixed(5)}</b><br/>
+            Lng: <b>${myDeviceCoords.lng.toFixed(5)}</b>
+          </div>
+          ${
+            myDeviceCoords.accuracy
+              ? `<div style="font-size: 10px; color: #16a34a; font-weight: 600; margin-top: 4px;">
+                  GPS Accuracy: ±${myDeviceCoords.accuracy} meters
+                </div>`
+              : ''
+          }
+          <div style="margin-top: 6px; padding: 3px 8px; border-radius: 6px; background: #eff6ff; color: #1d4ed8; font-size: 10px; font-weight: 700; text-align: center; border: 1px solid #bfdbfe;">
+            ✓ Free OpenStreetMap API Verified
+          </div>
         </div>
       `)
       .addTo(map);
 
     myLocationMarkerRef.current = marker;
-  }, [myDeviceCoords]);
+
+    // Automatically fly to user's real live location on first fix
+    if (!hasInitialCentered) {
+      map.flyTo([myDeviceCoords.lat, myDeviceCoords.lng], 15, {
+        duration: 1.2,
+      });
+      setHasInitialCentered(true);
+    }
+  }, [myDeviceCoords, hasInitialCentered]);
+
+  // Handle Locate Me (Browser Geolocation)
+  const handleLocateMeClick = () => {
+    if (onLocateMe) {
+      onLocateMe();
+      return;
+    }
+
+    if (!('geolocation' in navigator)) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setInternalLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setInternalLocating(false);
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        const map = mapInstanceRef.current;
+        if (map) {
+          map.flyTo([lat, lng], 16, { duration: 1.2 });
+        }
+      },
+      (err) => {
+        setInternalLocating(false);
+        alert(`Location acquisition error: ${err.message}. Please enable location permissions.`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Center on User Coordinates
+  const handleCenterOnUser = () => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (myDeviceCoords) {
+      map.flyTo([myDeviceCoords.lat, myDeviceCoords.lng], 16, {
+        duration: 1.0,
+      });
+      myLocationMarkerRef.current?.openPopup();
+    } else {
+      handleLocateMeClick();
+    }
+  };
 
   // Handle Controls
   const handleZoomIn = () => mapInstanceRef.current?.zoomIn();
   const handleZoomOut = () => mapInstanceRef.current?.zoomOut();
   const handleFitAll = () => {
     if (!mapInstanceRef.current) return;
-    const allCoords: [number, number][] = reps.map((r) => [r.coords.lat, r.coords.lng]);
-    if (myDeviceCoords) allCoords.push([myDeviceCoords.lat, myDeviceCoords.lng]);
+    const allCoords: [number, number][] = reps.map((r) => [
+      r.coords.lat,
+      r.coords.lng,
+    ]);
+    if (myDeviceCoords)
+      allCoords.push([myDeviceCoords.lat, myDeviceCoords.lng]);
 
     if (allCoords.length > 0) {
       const bounds = L.latLngBounds(allCoords);
-      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      mapInstanceRef.current.fitBounds(bounds, {
+        padding: [50, 50],
+        maxZoom: 14,
+      });
     }
   };
+
+  const locatingActive = isLocating || internalLocating;
 
   return (
     <div className="relative w-full h-full min-h-[520px] rounded-2xl overflow-hidden border border-slate-700/60 bg-slate-950 shadow-2xl">
@@ -312,35 +439,89 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
       <div ref={mapContainerRef} className="w-full h-full min-h-[520px] z-0" />
 
       {/* Floating Top Controls HUD */}
-      <div className="absolute top-4 left-4 z-[500] flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-700/80 shadow-lg text-xs font-semibold text-white">
-        <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-        <span>Live Radar Engine</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-        <span className="text-slate-400 text-[11px]">{reps.length} Reps Monitored</span>
+      <div className="absolute top-4 left-4 z-[500] flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-2 bg-slate-900/95 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-700/80 shadow-lg text-xs font-semibold text-white">
+          <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
+          <span>Live Radar Engine</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+          <span className="text-slate-400 text-[11px]">
+            {reps.length} Reps Monitored
+          </span>
+        </div>
+
+        {/* Real Live GPS Lock Indicator */}
+        <button
+          onClick={handleCenterOnUser}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer border ${
+            myDeviceCoords
+              ? 'bg-blue-600/90 hover:bg-blue-500 text-white border-blue-400'
+              : 'bg-slate-900/90 hover:bg-slate-800 text-blue-400 border-slate-700/80'
+          }`}
+          title={
+            myDeviceCoords
+              ? `Real Live GPS locked: ${myDeviceCoords.lat}, ${myDeviceCoords.lng}. Click to center!`
+              : 'Click to acquire Real Live Device GPS'
+          }
+        >
+          <Compass
+            className={`w-3.5 h-3.5 ${
+              locatingActive ? 'animate-spin' : myDeviceCoords ? 'text-white' : 'text-blue-400'
+            }`}
+          />
+          <span>
+            {locatingActive
+              ? 'Locking GPS...'
+              : myDeviceCoords
+              ? 'Real Live Location: LOCKED'
+              : 'Find Real Location'}
+          </span>
+        </button>
+
+        {/* Free Map API Badge */}
+        <div className="hidden sm:flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-emerald-500/30 text-[11px] font-semibold text-emerald-400 shadow-lg">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>Free OpenStreetMap API</span>
+        </div>
       </div>
 
       {/* Map Style Selector HUD */}
-      <div className="absolute top-4 right-4 z-[500] flex items-center gap-1 bg-slate-900/90 backdrop-blur-md p-1 rounded-xl border border-slate-700/80 shadow-lg">
+      <div className="absolute top-4 right-4 z-[500] flex items-center gap-1 bg-slate-900/95 backdrop-blur-md p-1 rounded-xl border border-slate-700/80 shadow-lg">
         <button
           onClick={() => setMapLayer('streets')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-            mapLayer === 'streets' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            mapLayer === 'streets'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'text-slate-300 hover:text-white'
           }`}
         >
           Street
         </button>
         <button
           onClick={() => setMapLayer('satellite')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-            mapLayer === 'satellite' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            mapLayer === 'satellite'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'text-slate-300 hover:text-white'
           }`}
         >
           Satellite
         </button>
         <button
+          onClick={() => setMapLayer('humanitarian')}
+          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            mapLayer === 'humanitarian'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'text-slate-300 hover:text-white'
+          }`}
+        >
+          Terrain
+        </button>
+        <button
           onClick={() => setMapLayer('dark')}
-          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
-            mapLayer === 'dark' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
+          className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+            mapLayer === 'dark'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'text-slate-300 hover:text-white'
           }`}
         >
           Dark
@@ -349,40 +530,71 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
 
       {/* Bottom Floating Controls */}
       <div className="absolute bottom-4 right-4 z-[500] flex flex-col gap-2">
+        {/* Real Live GPS Center Button */}
+        <button
+          onClick={handleCenterOnUser}
+          title="Center on My Real Live Device GPS"
+          className="p-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl shadow-xl transition-all cursor-pointer border border-blue-400"
+        >
+          <Crosshair className={`w-4 h-4 ${locatingActive ? 'animate-spin' : ''}`} />
+        </button>
+
         <button
           onClick={handleZoomIn}
           title="Zoom In"
-          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all"
+          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all cursor-pointer"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomOut}
           title="Zoom Out"
-          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all"
+          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all cursor-pointer"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleFitAll}
-          title="Fit All Fleet on Map"
-          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all"
+          title="Fit All Fleet & Real Location on Map"
+          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all cursor-pointer"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
       </div>
 
-      {/* Auto-Follow Toggle */}
-      <div className="absolute bottom-4 left-4 z-[500] flex items-center gap-2 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/80 shadow-lg text-xs font-semibold text-white">
-        <button
-          onClick={() => setAutoFollow(!autoFollow)}
-          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${
-            autoFollow ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400'
-          }`}
-        >
-          <Crosshair className={`w-3.5 h-3.5 ${autoFollow ? 'animate-spin text-emerald-400' : ''}`} />
-          <span>Auto-Center Selected</span>
-        </button>
+      {/* Auto-Follow Toggle & Attribution */}
+      <div className="absolute bottom-4 left-4 z-[500] flex flex-wrap items-center gap-2">
+        <div className="bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-700/80 shadow-lg text-xs font-semibold text-white">
+          <button
+            onClick={() => setAutoFollow(!autoFollow)}
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all cursor-pointer ${
+              autoFollow
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'text-slate-400'
+            }`}
+          >
+            <Crosshair
+              className={`w-3.5 h-3.5 ${
+                autoFollow ? 'animate-spin text-emerald-400' : ''
+              }`}
+            />
+            <span>Auto-Center Selected</span>
+          </button>
+        </div>
+
+        {/* Free Map Attribution Badge */}
+        <div className="bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg border border-slate-800 text-[10px] text-slate-400">
+          <span>Map tiles © </span>
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-300 hover:underline"
+          >
+            OpenStreetMap
+          </a>
+          <span> contributors (Free)</span>
+        </div>
       </div>
     </div>
   );

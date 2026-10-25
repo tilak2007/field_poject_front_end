@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Search, Plus, RefreshCw, X, CheckCircle2, Tag, Layers, IndianRupee, Image } from 'lucide-react';
+import {
+  Package,
+  Search,
+  Plus,
+  RefreshCw,
+  X,
+  CheckCircle2,
+  Tag,
+  Layers,
+  IndianRupee,
+  Image,
+  Navigation,
+  Store,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { mockProducts } from '../data/mockData';
 import type { Product } from '../types';
 import { productsApi } from '../api';
+import { ProductStockMap } from '../components/maps/ProductStockMap';
 
 export const Products: React.FC = () => {
   const [products, setProducts] = useState<Product[]>(() => {
@@ -23,6 +37,8 @@ export const Products: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('All');
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [selectedMapSku, setSelectedMapSku] = useState<string | null>(null);
 
   // Modal and toast states
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -179,7 +195,33 @@ export const Products: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-3 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+          {/* View Mode Switcher: Catalog vs Live Outlets Map */}
+          <div className="flex items-center gap-1 p-1 bg-slate-900 border border-slate-800 rounded-xl shadow-inner">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Package className="w-3.5 h-3.5" />
+              <span>SKU Catalog</span>
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                viewMode === 'map'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Navigation className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Live Outlets Map (Real GPS)</span>
+            </button>
+          </div>
+
           <button
             onClick={fetchProducts}
             disabled={isLoading}
@@ -199,101 +241,124 @@ export const Products: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search SKU code, product name..."
-            className="w-full h-10 pl-10 pr-4 text-xs bg-slate-950/80 border border-slate-800 text-slate-200 placeholder-slate-400 rounded-xl focus:outline-none focus:border-brand-500"
-          />
-        </div>
+      {/* Conditionally Render Map View or SKU Catalog Grid */}
+      {viewMode === 'map' ? (
+        <ProductStockMap
+          products={products}
+          selectedSku={selectedMapSku}
+          onSelectProduct={(sku) => setSelectedMapSku(sku)}
+        />
+      ) : (
+        <>
+          {/* Filters */}
+          <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search SKU code, product name..."
+                className="w-full h-10 pl-10 pr-4 text-xs bg-slate-950/80 border border-slate-800 text-slate-200 placeholder-slate-400 rounded-xl focus:outline-none focus:border-brand-500"
+              />
+            </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-          {['All', 'Beverages', 'Snacks', 'Personal Care', 'Dairy', 'FMCG'].map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
-                categoryFilter === cat
-                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                  : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Products Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.map((p) => (
-          <div
-            key={p.id}
-            className="glass-card glass-card-hover p-5 rounded-2xl space-y-4 border border-slate-800 flex flex-col justify-between"
-          >
-            <div className="space-y-3">
-              <div className="relative h-44 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
-                <img
-                  src={p.imageUrl}
-                  alt={p.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80';
-                  }}
-                />
-                <span
-                  className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-md ${
-                    p.status === 'In Stock'
-                      ? 'bg-emerald-500 text-white'
-                      : p.status === 'Low Stock'
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-rose-500 text-white'
+            <div className="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+              {['All', 'Beverages', 'Snacks', 'Personal Care', 'Dairy', 'FMCG'].map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                    categoryFilter === cat
+                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                      : 'bg-slate-900/60 text-slate-400 hover:text-white hover:bg-slate-800'
                   }`}
                 >
-                  {p.status}
-                </span>
-                <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md text-brand-300 text-[10px] font-mono font-bold border border-slate-800">
-                  {p.sku}
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-white line-clamp-1">{p.name}</h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {p.category} • Pack size: {p.casePackSize} units/case
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3 pt-3 border-t border-slate-800/80">
-              <div className="flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-[10px] text-slate-400 block">Unit Price / MRP</span>
-                  <span className="font-extrabold text-white text-sm">
-                    ₹{p.unitPrice}{' '}
-                    <span className="text-slate-400 line-through text-xs font-normal">
-                      ₹{p.mrp}
-                    </span>
-                  </span>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-400 block">Stock in Hand</span>
-                  <span className="font-bold text-brand-400 text-sm font-mono">
-                    {p.stockInHandCases} Cases
-                  </span>
-                </div>
-              </div>
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
-        ))}
-      </div>
+
+          {/* Products Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProducts.map((p) => (
+              <div
+                key={p.id}
+                className="glass-card glass-card-hover p-5 rounded-2xl space-y-4 border border-slate-800 flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="relative h-44 rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                    <img
+                      src={p.imageUrl}
+                      alt={p.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src =
+                          'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80';
+                      }}
+                    />
+                    <span
+                      className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-bold shadow-md ${
+                        p.status === 'In Stock'
+                          ? 'bg-emerald-500 text-white'
+                          : p.status === 'Low Stock'
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-rose-500 text-white'
+                      }`}
+                    >
+                      {p.status}
+                    </span>
+                    <span className="absolute bottom-3 left-3 px-2.5 py-1 rounded-lg bg-slate-950/80 backdrop-blur-md text-brand-300 text-[10px] font-mono font-bold border border-slate-800">
+                      {p.sku}
+                    </span>
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-white line-clamp-1">{p.name}</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      {p.category} • Pack size: {p.casePackSize} units/case
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-3 pt-3 border-t border-slate-800/80">
+                  <div className="flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block">Unit Price / MRP</span>
+                      <span className="font-extrabold text-white text-sm">
+                        ₹{p.unitPrice}{' '}
+                        <span className="text-slate-400 line-through text-xs font-normal">
+                          ₹{p.mrp}
+                        </span>
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">Stock in Hand</span>
+                      <span className="font-bold text-brand-400 text-sm font-mono">
+                        {p.stockInHandCases} Cases
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Locate Stores On Live Map Button */}
+                  <button
+                    onClick={() => {
+                      setSelectedMapSku(p.sku);
+                      setViewMode('map');
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 border border-slate-800 hover:border-emerald-500/40 text-xs font-bold transition-all shadow-sm cursor-pointer"
+                  >
+                    <Store className="w-3.5 h-3.5" />
+                    <span>View Stores Stock on Map (Live GPS)</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Modal: Add New Product SKU */}
       <AnimatePresence>
