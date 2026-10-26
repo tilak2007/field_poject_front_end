@@ -15,7 +15,9 @@ import {
   Shield,
   Server,
   ChevronDown,
+  Database,
 } from 'lucide-react';
+import { CloudConnectionModal } from './CloudConnectionModal';
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -35,6 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
+  const [showCloudModal, setShowCloudModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const notifications = [
@@ -119,6 +122,17 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right: GPS Sync, Region Selector, Notifications & User Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Permanent Cloud / Database Connection Pill */}
+        <button
+          onClick={() => setShowCloudModal(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 transition-all cursor-pointer shadow-sm"
+          title="Permanent Supabase Cloud & Offline-First Storage Engine"
+        >
+          <Database className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="hidden sm:inline">Permanent Sync</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        </button>
+
         {/* GPS Live Sync Status Pill (Managers / Admins only) */}
         {isManagerOrAdmin && (
           <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium">
@@ -332,6 +346,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       )}
+
+      {/* Permanent Cloud Connection Settings Modal */}
+      <CloudConnectionModal
+        isOpen={showCloudModal}
+        onClose={() => setShowCloudModal(false)}
+      />
     </header>
   );
 };
