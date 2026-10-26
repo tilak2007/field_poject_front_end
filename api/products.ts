@@ -1,24 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 // FieldAssist Serverless Backend: Products API
-const rawUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
-const supabaseUrl = !rawUrl || rawUrl.includes('baqelrnhnrsdnubasepq')
-  ? 'https://ibzycpftqmngcrmgpsed.supabase.co'
-  : rawUrl;
+const supabaseUrl = 'https://ibzycpftqmngcrmgpsed.supabase.co';
+const supabaseKey =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlienljcGZ0cW1uZ2NybWdwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODcxMzksImV4cCI6MjEwODU2MzEzOX0.O_FyD60-X_khKoPajDBA1xn_Gu87cmOffoB5wFhfrl8';
 
-const rawKey =
-  process.env.SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  '';
-const supabaseKey = !rawKey || rawKey.includes('baqelrnhnrsdnubasepq')
-  ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlienljcGZ0cW1uZ2NybWdwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODcxMzksImV4cCI6MjEwODU2MzEzOX0.O_FyD60-X_khKoPajDBA1xn_Gu87cmOffoB5wFhfrl8'
-  : rawKey;
-
-const isSupabaseConfigured = Boolean(supabaseUrl && supabaseKey);
-const serverSupabase = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } })
-  : null;
+const isSupabaseConfigured = true;
+const serverSupabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
 const mockProducts = [
   {
     id: 'prod-1',
