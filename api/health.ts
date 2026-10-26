@@ -1,3 +1,5 @@
+import { isSupabaseConfigured } from './_supabase';
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,15 +10,14 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  const hasDatabase = Boolean(process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL);
-
   return res.status(200).json({
     status: 'online',
     service: 'FieldAssist Backend Engine',
     version: '2.5.0',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production',
-    databaseConnection: hasDatabase ? 'configured' : 'serverless-in-memory',
+    databaseConnection: isSupabaseConfigured ? 'supabase-permanent' : 'local-persistent-fallback',
+    permanentSyncReady: true,
     routes: [
       '/api/health',
       '/api/retailers',

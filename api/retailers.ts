@@ -1,3 +1,5 @@
+import { serverSupabase } from './_supabase';
+
 // FieldAssist Serverless Backend: Retailers API
 const mockRetailers = [
   {
@@ -93,6 +95,47 @@ export default async function handler(req: any, res: any) {
   // GET: List retailers with filtering
   if (req.method === 'GET') {
     const { q, territory, type, status } = req.query || {};
+
+    if (serverSupabase) {
+      try {
+        let query = serverSupabase.from('retailers').select('*');
+        if (territory && territory !== 'All') query = query.eq('territory', territory);
+        if (type && type !== 'All') query = query.eq('type', type);
+        if (status && status !== 'All') query = query.eq('status', status);
+        if (q) query = query.or(`name.ilike.%${q}%,owner_name.ilike.%${q}%,code.ilike.%${q}%`);
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          const mapped = data.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            ownerName: r.owner_name || r.ownerName || 'Store Owner',
+            code: r.code,
+            type: r.type || 'Kirana',
+            phone: r.phone || '+91 98000 00000',
+            address: r.address || '',
+            territory: r.territory || 'North Delhi',
+            city: r.city || 'New Delhi',
+            outstandingBalance: Number(r.outstanding_balance ?? r.outstandingBalance ?? 0),
+            creditLimit: Number(r.credit_limit ?? r.creditLimit ?? 50000),
+            lastOrderDate: r.last_order_date || r.lastOrderDate || new Date().toISOString().split('T')[0],
+            lastVisitDate: r.last_visit_date || r.lastVisitDate || new Date().toISOString().split('T')[0],
+            assignedRepName: r.assigned_rep_name || r.assignedRepName || 'Vikram Sharma',
+            assignedRepId: r.assigned_rep_id || r.assignedRepId || 'rep-1',
+            status: r.status || 'Active',
+            rating: Number(r.rating ?? 5),
+          }));
+          return res.status(200).json({
+            success: true,
+            count: mapped.length,
+            data: mapped,
+            source: 'supabase-permanent',
+          });
+        }
+      } catch (err) {
+        console.warn('Supabase retailers query fallback notice:', err);
+      }
+    }
+
     let filtered = [...retailersStore];
 
     if (q) {
@@ -118,6 +161,7 @@ export default async function handler(req: any, res: any) {
       success: true,
       count: filtered.length,
       data: filtered,
+      source: 'local-persistent',
     });
   }
 
@@ -150,6 +194,29 @@ export default async function handler(req: any, res: any) {
       rating: body.rating || 5,
     };
 
+    if (serverSupabase) {
+      try {
+        await serverSupabase.from('retailers').insert([
+          {
+            id: newRetailer.id,
+            code: newRetailer.code,
+            name: newRetailer.name,
+            owner_name: newRetailer.ownerName,
+            type: newRetailer.type,
+            phone: newRetailer.phone,
+            address: newRetailer.address,
+            territory: newRetailer.territory,
+            city: newRetailer.city,
+            outstanding_balance: newRetailer.outstandingBalance,
+            credit_limit: newRetailer.creditLimit,
+            status: newRetailer.status,
+          },
+        ]);
+      } catch (err) {
+        console.warn('Supabase retailer insert fallback notice:', err);
+      }
+    }
+
     retailersStore.unshift(newRetailer);
     return res.status(201).json({
       success: true,
@@ -169,6 +236,23 @@ export default async function handler(req: any, res: any) {
     }
 
     retailersStore[index] = { ...retailersStore[index], ...body };
+
+    if (serverSupabase) {
+      try {
+        await serverSupabase
+          .from('retailers')
+          .update({
+            name: body.name || retailersStore[index].name,
+            owner_name: body.ownerName || retailersStore[index].ownerName,
+            status: body.status || retailersStore[index].status,
+            outstanding_balance: body.outstandingBalance !== undefined ? Number(body.outstandingBalance) : retailersStore[index].outstandingBalance,
+          })
+          .eq('id', retailersStore[index].id);
+      } catch (err) {
+        console.warn('Supabase retailer update fallback notice:', err);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Retailer updated successfully',

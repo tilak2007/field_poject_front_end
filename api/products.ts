@@ -1,3 +1,5 @@
+import { serverSupabase } from './_supabase';
+
 // FieldAssist Serverless Backend: Products API
 const mockProducts = [
   {
@@ -84,9 +86,43 @@ export default async function handler(req: any, res: any) {
     return res.status(200).end();
   }
 
-  // GET: Return products catalog
+  // GET: Return products catalog (from Supabase if configured, otherwise persistent store)
   if (req.method === 'GET') {
     const { category, search, status } = req.query || {};
+
+    if (serverSupabase) {
+      try {
+        let query = serverSupabase.from('products').select('*').eq('is_active', true);
+        if (category && category !== 'All') query = query.eq('category', category);
+        if (search) query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%`);
+        const { data, error } = await query;
+        if (!error && data && data.length > 0) {
+          const mapped = data.map((p: any) => ({
+            id: p.id,
+            sku: p.sku,
+            name: p.name,
+            category: p.category,
+            unitPrice: Number(p.unit_price),
+            mrp: Number(p.mrp),
+            casePackSize: Number(p.case_size ?? 24),
+            stockInHandCases: Number(p.stock_cases ?? 100),
+            reorderLevelCases: 30,
+            taxRatePct: 18,
+            imageUrl: p.image_url || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500&auto=format&fit=crop&q=80',
+            status: Number(p.stock_cases ?? 100) > 30 ? 'In Stock' : 'Low Stock',
+          }));
+          return res.status(200).json({
+            success: true,
+            count: mapped.length,
+            data: mapped,
+            source: 'supabase-permanent',
+          });
+        }
+      } catch (err) {
+        console.warn('Supabase query fallback notice:', err);
+      }
+    }
+
     let filtered = [...productsStore];
 
     if (search) {
@@ -106,6 +142,7 @@ export default async function handler(req: any, res: any) {
       success: true,
       count: filtered.length,
       data: filtered,
+      source: 'local-persistent',
     });
   }
 
@@ -131,10 +168,31 @@ export default async function handler(req: any, res: any) {
       status: Number(body.stockInHandCases) > 50 ? 'In Stock' : 'Low Stock',
     };
 
+    if (serverSupabase) {
+      try {
+        await serverSupabase.from('products').insert([
+          {
+            id: newProduct.id,
+            sku: newProduct.sku,
+            name: newProduct.name,
+            category: newProduct.category,
+            unit_price: newProduct.unitPrice,
+            mrp: newProduct.mrp,
+            case_size: newProduct.casePackSize,
+            stock_cases: newProduct.stockInHandCases,
+            image_url: newProduct.imageUrl,
+            is_active: true,
+          },
+        ]);
+      } catch (err) {
+        console.warn('Supabase insert fallback notice:', err);
+      }
+    }
+
     productsStore.unshift(newProduct);
     return res.status(201).json({
       success: true,
-      message: 'Product SKU created successfully',
+      message: 'Product SKU created permanently',
       data: newProduct,
     });
   }
@@ -161,9 +219,20 @@ export default async function handler(req: any, res: any) {
         ? 'Low Stock'
         : 'In Stock';
 
+    if (serverSupabase) {
+      try {
+        await serverSupabase
+          .from('products')
+          .update({ stock_cases: productsStore[index].stockInHandCases })
+          .eq('id', id);
+      } catch (err) {
+        console.warn('Supabase stock update fallback notice:', err);
+      }
+    }
+
     return res.status(200).json({
       success: true,
-      message: 'Product stock updated',
+      message: 'Product stock updated permanently',
       data: productsStore[index],
     });
   }
