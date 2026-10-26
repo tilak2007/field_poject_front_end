@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS public.products (
   mrp NUMERIC(10,2) NOT NULL,
   case_size INT DEFAULT 24,
   stock_cases INT DEFAULT 150,
+  image_url TEXT,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
