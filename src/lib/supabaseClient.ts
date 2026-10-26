@@ -18,16 +18,13 @@ export const getSupabaseConfig = () => {
     import.meta.env.VITE_SUPABASE_ANON_KEY ||
     '';
 
-  const finalUrl = storedUrl || envUrl || 'https://baqelrnhnrsdnubasepq.supabase.co';
+  const finalUrl = storedUrl || envUrl || 'https://ibzycpftqmngcrmgpsed.supabase.co';
   const finalKey =
     storedKey ||
     envKey ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJhcWVscm5obnJzZG51YmFzZXBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE1NTg3NjgsImV4cCI6MjEwNzEzNDc2OH0.FoaZMFc1cwkQhkWiEXEGfwYZOHS_Ca7DR28UXsBgJy4';
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlienljcGZ0cW1uZ2NybWdwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODcxMzksImV4cCI6MjEwODU2MzEzOX0.O_FyD60-X_khKoPajDBA1xn_Gu87cmOffoB5wFhfrl8';
 
-  const isCustom = Boolean(
-    storedUrl ||
-      (envUrl && !envUrl.includes('baqelrnhnrsdnubasepq'))
-  );
+  const isCustom = true;
 
   return {
     url: finalUrl,

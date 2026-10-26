@@ -1,11 +1,14 @@
 // FieldAssist Serverless Backend: Health Check & System Status
-const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
+const supabaseUrl =
+  process.env.SUPABASE_URL ||
+  process.env.VITE_SUPABASE_URL ||
+  'https://ibzycpftqmngcrmgpsed.supabase.co';
 const supabaseKey =
   process.env.SUPABASE_ANON_KEY ||
   process.env.VITE_SUPABASE_ANON_KEY ||
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  '';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlienljcGZ0cW1uZ2NybWdwc2VkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5ODcxMzksImV4cCI6MjEwODU2MzEzOX0.O_FyD60-X_khKoPajDBA1xn_Gu87cmOffoB5wFhfrl8';
 const isSupabaseConfigured = Boolean(
   supabaseUrl && supabaseKey && !supabaseUrl.includes('baqelrnhnrsdnubasepq')
 );
