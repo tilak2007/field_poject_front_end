@@ -1,0 +1,1902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>A Field Project Report on FieldAssist</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
+
+    @page {
+      size: A4;
+      margin: 20mm 20mm 20mm 20mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 12pt;
+      line-height: 1.5;
+      color: #000;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 20mm 20mm 20mm 20mm;
+      margin: 0 auto 10mm auto;
+      background: #fff;
+      position: relative;
+      page-break-after: always;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    @media print {
+      body {
+        background: none;
+      }
+      .page {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        min-height: 100vh;
+      }
+    }
+
+    .page-number {
+      position: absolute;
+      bottom: 15mm;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 11pt;
+    }
+
+    h1.chapter-title {
+      font-size: 15pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-top: 0;
+      margin-bottom: 12pt;
+    }
+
+    h2.section-title {
+      font-size: 13pt;
+      font-weight: bold;
+      margin-top: 14pt;
+      margin-bottom: 8pt;
+    }
+
+    h3.sub-section-title {
+      font-size: 12pt;
+      font-weight: bold;
+      margin-top: 10pt;
+      margin-bottom: 6pt;
+    }
+
+    p {
+      text-align: justify;
+      margin-top: 0;
+      margin-bottom: 8pt;
+      text-indent: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10pt 0 14pt 0;
+      font-size: 10.5pt;
+    }
+
+    table, th, td {
+      border: 1px solid #444;
+    }
+
+    th {
+      background-color: #f2f2f2;
+      font-weight: bold;
+      padding: 6pt 8pt;
+      text-align: left;
+    }
+
+    td {
+      padding: 5pt 8pt;
+      vertical-align: top;
+    }
+
+    .caption {
+      text-align: center;
+      font-size: 10.5pt;
+      margin-top: 6pt;
+      margin-bottom: 12pt;
+    }
+
+    .diagram-container {
+      width: 100%;
+      text-align: center;
+      margin: 10pt 0 4pt 0;
+    }
+
+    .diagram-box {
+      display: inline-block;
+      border: 1px solid #777;
+      background: #fafafa;
+      border-radius: 4px;
+      padding: 8pt;
+    }
+
+    .center-text {
+      text-align: center;
+    }
+
+    .bold {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 1: TITLE PAGE -->
+  <!-- =================================================================== -->
+  <div class="page center-text">
+    <div style="margin-top: 15mm; margin-bottom: 25mm;">
+      <!-- SGU Shield Logo -->
+      <svg width="110" height="135" viewBox="0 0 120 150">
+        <path d="M 10 10 L 110 10 L 110 90 Q 110 140 60 150 Q 10 140 10 90 Z" fill="#cf2027" stroke="#901015" stroke-width="2"/>
+        <!-- 5 White Stars -->
+        <g fill="#ffffff">
+          <polygon points="26,24 28,30 34,30 29,34 31,40 26,36 21,40 23,34 18,30 24,30" transform="scale(0.8) translate(3,0)"/>
+          <polygon points="46,24 48,30 54,30 49,34 51,40 46,36 41,40 43,34 38,30 44,30" transform="scale(0.8) translate(14,0)"/>
+          <polygon points="66,24 68,30 74,30 69,34 71,40 66,36 61,40 63,34 58,30 64,30" transform="scale(0.8) translate(25,0)"/>
+          <polygon points="86,24 88,30 94,30 89,34 91,40 86,36 81,40 83,34 78,30 84,30" transform="scale(0.8) translate(36,0)"/>
+          <polygon points="106,24 108,30 114,30 109,34 111,40 106,36 101,40 103,34 98,30 104,30" transform="scale(0.8) translate(47,0)"/>
+        </g>
+        <rect x="18" y="44" width="84" height="38" fill="#ffffff" rx="2" />
+        <text x="60" y="73" fill="#cf2027" font-family="'Arial Black', Impact, sans-serif" font-size="28" font-weight="900" text-anchor="middle" letter-spacing="1">SGU</text>
+        <circle cx="60" cy="112" r="16" fill="#ffffff"/>
+        <path d="M 60 92 L 60 132 M 40 112 L 80 112 M 46 98 L 74 126 M 46 126 L 74 98" stroke="#cf2027" stroke-width="2.5"/>
+      </svg>
+    </div>
+
+    <div style="font-size: 13pt; letter-spacing: 1px; font-weight: bold; margin-bottom: 24pt;">
+      A FIELD PROJECT REPORT ON
+    </div>
+
+    <div style="font-size: 18pt; font-weight: bold; margin-bottom: 10pt; line-height: 1.3;">
+      FieldAssist: Field Sales Force Automation &<br>Secondary Distribution Management System
+    </div>
+
+    <div style="font-size: 11pt; margin-bottom: 12pt;">
+      Submitted in partial fulfilment of the requirements for
+    </div>
+
+    <div style="font-size: 13pt; font-weight: bold; margin-bottom: 25pt;">
+      UCSFP301 — Field Project
+    </div>
+
+    <div style="font-size: 11.5pt; margin-bottom: 25pt;">
+      Second Year — Bachelor of Technology in Computer Science and Engineering
+    </div>
+
+    <div style="font-size: 11pt; font-weight: bold; letter-spacing: 1px; margin-bottom: 10pt;">
+      SUBMITTED BY
+    </div>
+
+    <div style="font-size: 11pt; line-height: 1.8; margin-bottom: 25pt;">
+      Vinayaka Tilak PS &nbsp;|&nbsp; PRN No: 252141165<br>
+      Team Member 2 &nbsp;|&nbsp; PRN No: 252141173<br>
+      Team Member 3 &nbsp;|&nbsp; PRN No: 252141162
+    </div>
+
+    <div style="font-size: 11pt; font-weight: bold; letter-spacing: 1px; margin-bottom: 8pt;">
+      UNDER THE GUIDANCE OF
+    </div>
+
+    <div style="font-size: 12pt; font-weight: bold; margin-bottom: 35pt;">
+      Mr. Gurunath Machhale
+    </div>
+
+    <div style="font-size: 11.5pt; font-weight: bold; line-height: 1.6;">
+      Department of Computer Science and Engineering<br>
+      Sanjay Ghodawat University, Kolhapur ,<br>
+      Academic Year 2026–27
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 2: CERTIFICATE -->
+  <!-- =================================================================== -->
+  <div class="page center-text">
+    <div style="margin-top: 15mm; margin-bottom: 25mm;">
+      <!-- SGU Shield Logo -->
+      <svg width="100" height="125" viewBox="0 0 120 150">
+        <path d="M 10 10 L 110 10 L 110 90 Q 110 140 60 150 Q 10 140 10 90 Z" fill="#cf2027" stroke="#901015" stroke-width="2"/>
+        <g fill="#ffffff">
+          <polygon points="26,24 28,30 34,30 29,34 31,40 26,36 21,40 23,34 18,30 24,30" transform="scale(0.8) translate(3,0)"/>
+          <polygon points="46,24 48,30 54,30 49,34 51,40 46,36 41,40 43,34 38,30 44,30" transform="scale(0.8) translate(14,0)"/>
+          <polygon points="66,24 68,30 74,30 69,34 71,40 66,36 61,40 63,34 58,30 64,30" transform="scale(0.8) translate(25,0)"/>
+          <polygon points="86,24 88,30 94,30 89,34 91,40 86,36 81,40 83,34 78,30 84,30" transform="scale(0.8) translate(36,0)"/>
+          <polygon points="106,24 108,30 114,30 109,34 111,40 106,36 101,40 103,34 98,30 104,30" transform="scale(0.8) translate(47,0)"/>
+        </g>
+        <rect x="18" y="44" width="84" height="38" fill="#ffffff" rx="2" />
+        <text x="60" y="73" fill="#cf2027" font-family="'Arial Black', Impact, sans-serif" font-size="28" font-weight="900" text-anchor="middle">SGU</text>
+        <circle cx="60" cy="112" r="16" fill="#ffffff"/>
+        <path d="M 60 92 L 60 132 M 40 112 L 80 112 M 46 98 L 74 126 M 46 126 L 74 98" stroke="#cf2027" stroke-width="2.5"/>
+      </svg>
+    </div>
+
+    <div style="font-size: 16pt; font-weight: bold; letter-spacing: 2px; margin-bottom: 25pt;">
+      CERTIFICATE
+    </div>
+
+    <div style="text-align: justify; font-size: 11.5pt; line-height: 1.8; margin-bottom: 20pt;">
+      This is to certify that the Field Project entitled
+    </div>
+
+    <div style="font-size: 13pt; font-weight: bold; font-style: italic; margin-bottom: 20pt;">
+      “FIELDASSIST: FIELD SALES FORCE AUTOMATION & SECONDARY DISTRIBUTION MANAGEMENT SYSTEM”
+    </div>
+
+    <div style="text-align: justify; font-size: 11.5pt; line-height: 1.8; margin-bottom: 18pt;">
+      has been satisfactorily carried out and submitted by the following students of Second Year B.Tech. 
+      Computer Science and Engineering, in partial fulfilment of the requirements for the course 
+      UCSFP301 — Field Project, during the academic year 2026–27, under our guidance.
+    </div>
+
+    <div style="text-align: left; font-size: 11pt; line-height: 2.2; margin-left: 20mm; margin-bottom: 45mm;">
+      1. Vinayaka Tilak PS &nbsp;&nbsp;&nbsp;&nbsp; PRN No: 252141165<br>
+      2. Team Member 2 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PRN No: 252141173<br>
+      3. Team Member 3 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; PRN No: 252141162
+    </div>
+
+    <div style="display: flex; justify-content: space-between; font-size: 11pt; font-weight: bold; margin-bottom: 25mm;">
+      <div style="width: 30%;">
+        Mr. Gurunath Machhale<br>
+        <span style="font-weight: normal;">(Mentor / Guide)</span>
+      </div>
+      <div style="width: 35%;">
+        Mrs. Seema Sambhushete<br>
+        <span style="font-weight: normal;">(Course Coordinator)</span>
+      </div>
+      <div style="width: 30%;">
+        Dr. Deepika Patil<br>
+        <span style="font-weight: normal;">( HOD, CSE)</span>
+      </div>
+    </div>
+
+    <div style="text-align: left; font-size: 11pt;">
+      Place: Kolhapur &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: ____________
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 3: DECLARATION -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="center-text" style="font-size: 16pt; font-weight: bold; letter-spacing: 2px; margin-top: 15mm; margin-bottom: 25pt;">
+      DECLARATION
+    </div>
+
+    <p style="font-size: 11.5pt; line-height: 1.8; margin-bottom: 25pt;">
+      We hereby declare that the Field Project report titled “FieldAssist: Field Sales Force Automation & Secondary Distribution Management System” submitted for UCSFP301 — Field Project is our original academic work prepared under the guidance of Mr. Gurunath Machhale. Technical explanations and external references used in the report are acknowledged where appropriate. We have not represented undocumented field visits, interviews, diagnostic accuracy as verified results.
+    </p>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 12%;">Sr. No</th>
+          <th style="width: 38%;">Name</th>
+          <th style="width: 25%;">PRN No</th>
+          <th style="width: 25%;">Signature</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center-text">1.</td>
+          <td>Vinayaka Tilak PS</td>
+          <td>252141165</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="center-text">2.</td>
+          <td>Team Member 2</td>
+          <td>252141173</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td class="center-text">3.</td>
+          <td>Team Member 3</td>
+          <td>252141162</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 75mm; font-size: 11pt;">
+      Place: Kolhapur &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Date: ____________
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 4: ACKNOWLEDGEMENT -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="center-text" style="font-size: 16pt; font-weight: bold; letter-spacing: 2px; margin-top: 15mm; margin-bottom: 25pt;">
+      ACKNOWLEDGEMENT
+    </div>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      We sincerely express our gratitude to Mr. Gurunath Machhale for his continuous support, guidance, and constructive feedback throughout the duration of this project. His expert suggestions helped us improve the technical quality, report structure, and overall understanding of the field sales engineering and secondary distribution process.
+    </p>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      We would also like to thank the Department of Computer Science and Engineering, Sanjay Ghodawat University, Kolhapur, for providing the academic environment, infrastructure, and institutional support needed to complete this work. The department provided us with opportunities to learn, discuss, and refine our project concept from the initial phase to the final implementation of the FieldAssist System.
+    </p>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      Our sincere appreciation goes to our faculty members for their cooperation during the planning, implementation, and testing of the system. Their guidance motivated us to work carefully and focus on both academic quality and practical effectiveness.
+    </p>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      We are grateful to our classmates and peers who contributed through valuable discussions and feedback. Their suggestions helped us improve the user interface design, geofence algorithm flow, and documentation quality. This project would not have achieved its present level of completeness without this consistent support and encouragement.
+    </p>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      Finally, we acknowledge the role of open-source tools, geospatial mapping references, and online technical resources such as the React, TypeScript, Leaflet, OpenStreetMap, Supabase, and Vercel documentation, which supported our understanding of the system design. Their availability enabled us to implement a practical and responsible solution for field sales monitoring and secondary order tracking.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 5: TABLE OF CONTENTS -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="center-text" style="font-size: 16pt; font-weight: bold; letter-spacing: 2px; margin-top: 10mm; margin-bottom: 20pt;">
+      TABLE OF CONTENTS
+    </div>
+
+    <table style="border: none; margin-top: 0; font-size: 11pt; line-height: 1.7;">
+      <tbody>
+        <tr style="border: none;"><td style="border: none;">1. Introduction .........................................................................................................................</td><td style="border: none; text-align: right;">1</td></tr>
+        <tr style="border: none;"><td style="border: none;">2. Literature Review ................................................................................................................</td><td style="border: none; text-align: right;">2</td></tr>
+        <tr style="border: none;"><td style="border: none;">3. Motivation, Problem Statement and Objectives .....................................................................</td><td style="border: none; text-align: right;">4</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">3.1 Motivation .....................................................................................................................</td><td style="border: none; text-align: right;">4</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">3.2 Problem Statement ........................................................................................................</td><td style="border: none; text-align: right;">4</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">3.3 Objectives .....................................................................................................................</td><td style="border: none; text-align: right;">5</td></tr>
+        <tr style="border: none;"><td style="border: none;">4. System Architecture ............................................................................................................</td><td style="border: none; text-align: right;">6</td></tr>
+        <tr style="border: none;"><td style="border: none;">5. System Design .....................................................................................................................</td><td style="border: none; text-align: right;">8</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.1 Use Case Diagram .........................................................................................................</td><td style="border: none; text-align: right;">8</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.2 Class Diagram ...............................................................................................................</td><td style="border: none; text-align: right;">9</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.3 Object Diagram .............................................................................................................</td><td style="border: none; text-align: right;">9</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.4 Sequence Diagram ........................................................................................................</td><td style="border: none; text-align: right;">10</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.5 Activity Diagram ...........................................................................................................</td><td style="border: none; text-align: right;">10</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.6 State Chart Diagram .....................................................................................................</td><td style="border: none; text-align: right;">11</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.7 Communication Diagram ............................................................................................</td><td style="border: none; text-align: right;">11</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.8 Component Diagram ....................................................................................................</td><td style="border: none; text-align: right;">12</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.9 Deployment Diagram ....................................................................................................</td><td style="border: none; text-align: right;">12</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">5.10 Data Flow Diagram ....................................................................................................</td><td style="border: none; text-align: right;">13</td></tr>
+        <tr style="border: none;"><td style="border: none;">6. Methodology .......................................................................................................................</td><td style="border: none; text-align: right;">14</td></tr>
+        <tr style="border: none;"><td style="border: none;">7. Field Work Details & Data Collected ...................................................................................</td><td style="border: none; text-align: right;">16</td></tr>
+        <tr style="border: none;"><td style="border: none;">8. Result & Analysis ................................................................................................................</td><td style="border: none; text-align: right;">18</td></tr>
+        <tr style="border: none;"><td style="border: none;">9. Conclusion and Future Scope ..............................................................................................</td><td style="border: none; text-align: right;">23</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">9.1 Conclusion ....................................................................................................................</td><td style="border: none; text-align: right;">23</td></tr>
+        <tr style="border: none;"><td style="border: none; padding-left: 20pt;">9.2 Future Scope .................................................................................................................</td><td style="border: none; text-align: right;">23</td></tr>
+        <tr style="border: none;"><td style="border: none;">10. References .........................................................................................................................</td><td style="border: none; text-align: right;">24</td></tr>
+        <tr style="border: none;"><td style="border: none;">11. Appendix ............................................................................................................................</td><td style="border: none; text-align: right;">25</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 6: ABSTRACT -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="center-text" style="font-size: 16pt; font-weight: bold; letter-spacing: 2px; margin-top: 15mm; margin-bottom: 25pt;">
+      ABSTRACT
+    </div>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      The FieldAssist System is a web-based application designed to help commercial FMCG and consumer packaged goods enterprises streamline secondary distribution, field representative monitoring, and automated retail order booking. It is built using React 19 and TypeScript for dynamic user interface management, Tailwind CSS for styling, Leaflet and OpenStreetMap for interactive geospatial positioning, Vercel Serverless micro-services for backend routing, and Supabase (PostgreSQL) paired with local storage for permanent data persistence. The application runs responsively in standard desktop and mobile web browsers.
+    </p>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      The application features five primary operational modules: a Live GIS Fleet Tracking Radar, a Retail Store Directory with Credit Scoring, a Dynamic Product Inventory Catalog with Stock Level Alerts, an Atomic Secondary Order Booking Engine, and an Automated Geofence Verification and Beat Plan System. The user enters or inspects operational values such as retailer coordinates, order SKU case quantities, pricing, and GPS check-in pings, and the live status is presented on the interactive dashboard.
+    </p>
+
+    <p style="font-size: 11.5pt; line-height: 1.8;">
+      The system does not rely on costly proprietary mapping APIs (such as Google Maps), black-box machine-learning predictors, or vendor-locked proprietary mobile SDKs. Representative locations are acquired through the browser’s standard HTML5 Geolocation API backed by multi-tier IP/network fallback, and map rendering is handled directly by public OpenStreetMap raster tiles. The numbers and data instances provided in this report are examples and illustrative operational records. The system is engineered to provide transparent, hand-checkable calculations, permanent cloud synchronisation, and uninterrupted offline capability.
+    </p>
+
+    <div style="margin-top: 30mm; font-size: 11.5pt;">
+      <span class="bold">Keywords :-</span> Field Sales Automation , OpenStreetMap , Leaflet GIS , Supabase PostgreSQL , Secondary Distribution , Geofencing , React 19 .
+    </div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 7: CHAPTER 1 - INTRODUCTION (Page 1) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">1</div>
+    <h1 class="chapter-title">1. INTRODUCTION</h1>
+
+    <p>
+      In fast-moving consumer goods (FMCG) and retail distribution networks, manufacturers and primary distributors supply products to retail stores through on-ground sales representatives. The effectiveness of this secondary distribution channel depends on regular store visits, accurate order booking, disciplined beat schedule execution, and transparent inventory tracking. Traditionally, sales representatives record retailer orders on physical paper books, call distributors over the phone, and submit manually compiled end-of-day visit logs. This paper-bound workflow introduces transcription errors, delayed order dispatches, stock-outs at retail counters, and a general lack of operational visibility for regional sales managers.
+    </p>
+
+    <p>
+      Our project, the FieldAssist System, is a web application that runs responsively in a browser.
+    </p>
+
+    <p>
+      The user enters and inspects field records, and the system processes order totals, distance matrices, geofence compliance, and stock updates in real time. The dashboard has modular sections for fleet telemetry, retail store management, inventory catalogs, and order booking. Each module provides interactive data views, search filters, form validation, and feedback messages. The calculations use transparent arithmetic formulas, so the application does not rely on opaque AI models or hidden algorithms.
+    </p>
+
+    <p>
+      The system is needed because regional sales managers often want to verify whether field representatives physically visited their assigned retail outlets, track rep battery and live coordinates, prevent fraudulent check-ins, inspect retail debt exposure, and monitor secondary sales order volumes against assigned monthly targets. Sales executives also need an immediate tool to browse live catalog prices, calculate bulk order values with tax, and book orders directly at the retail storefront. Our system gives all of these in one browser-based interface.
+    </p>
+
+    <p>
+      The scope of the project is focused on secondary sales operations, geospatial tracking, and retail order workflows. It does not include primary factory ERP manufacturing batch management, hardware laser barcode scanners, or credit card payment processing. The telemetry and geofence results depend on browser geolocation permissions and user-submitted data.
+    </p>
+
+    <p>
+      The rest of this report is organised as follows. Chapter 2 reviews the existing literature and identifies the gaps. Chapter 3 gives the motivation, problem statement and numbered objectives. Chapters 4 and 5 describe the system architecture and the system design with UML diagrams. Chapter 6 explains the methodology, Chapter 7 gives the field work details and data used, and Chapter 8 presents the results and analysis. Chapter 9 gives the conclusion and future scope, followed by the references and the appendix. In this report, an “estimate” means a calculated result from user-entered inputs and formulas; it is not an arbitrary forecast.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 8: CHAPTER 2 - LITERATURE REVIEW (Page 2) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">2</div>
+    <h1 class="chapter-title">2. LITERATURE REVIEW</h1>
+    <h2 class="section-title">2.1 Background study</h2>
+
+    <p>
+      Secondary sales force automation systems have been widely investigated in enterprise supply chain literature. In traditional field distribution, route coverage is planned using fixed beat schedules where a representative visits a predefined set of retail counters on specific weekdays. Prior studies indicate that paper-based order management leads to order latency of up to 48 hours, inventory discrepancies between stockists and retailers, and lack of accountability regarding representative route adherence.
+    </p>
+
+    <p>
+      Modern digital solutions introduce mobile sales force automation (SFA) to capture orders electronically and transmit them directly to warehouse databases. However, many existing commercial SFA systems suffer from two major drawbacks: high operational recurring costs caused by proprietary mapping APIs (such as Google Maps Platform per-request billing), and brittle offline behavior that fails when field executives enter dense urban markets or rural zones with poor network connectivity.
+    </p>
+
+    <p>
+      An open-source geospatial approach suits this project because public raster tile providers (such as OpenStreetMap) coupled with lightweight client-side mapping engines (Leaflet) eliminate third-party API keys, billing thresholds, and vendor watermarks. At the same time, computing distance between coordinates using the standard Haversine formula ensures mathematical transparency and allows managers to verify geofence boundaries without complex external GIS software.
+    </p>
+
+    <p>
+      In terms of system reliability, client-side validation must check required form fields, non-negative quantities, phone number structures, and valid geographic coordinates before transmitting requests. By implementing a hybrid three-tier persistence layer (Supabase PostgreSQL cloud database, Vercel Serverless micro-services, and browser local storage fallback), the system ensures uninterrupted data entry even during intermittent network disconnections.
+    </p>
+
+    <p>
+      The technologies we selected are suitable for a modern web application deployed on cloud edge infrastructure. React 19 provides component-based UI rendering, TypeScript guarantees compile-time type safety, Tailwind CSS ensures responsive layout styling, Leaflet renders interactive maps, Vercel serverless functions handle API requests, and Supabase provides managed PostgreSQL storage.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 9: CHAPTER 2 - GAPS IDENTIFIED (Page 3) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">3</div>
+    <h2 class="section-title">2.2 Gaps identified</h2>
+
+    <p>
+      From the above review, the following gaps were identified in existing commercial and academic field sales applications. Each gap is directly linked to a specific design decision in this project.
+    </p>
+
+    <div class="caption">Table 2: Gaps identified and how this project responds</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 10%;">Gap</th>
+          <th style="width: 45%;">Gap identified in existing work</th>
+          <th style="width: 45%;">Response in this project</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold center-text">G1</td>
+          <td>Commercial SFA tools rely on Google Maps APIs which require credit cards and introduce high per-request costs for small and medium enterprises.</td>
+          <td>Utilise 100% free, open-source OpenStreetMap raster tiles through Leaflet with zero API key dependencies.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">G2</td>
+          <td>Most systems separate order booking, live GPS tracking, and retailer ledger management into disconnected third-party tools.</td>
+          <td>Combine fleet telemetry, store directory, stock catalogs, and order booking into one unified dashboard.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">G3</td>
+          <td>Field representatives frequently fake store visits by marking attendance remotely without physical storefront presence.</td>
+          <td>Implement mathematical geofencing with the Haversine formula and automated 100-meter boundary validation.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">G4</td>
+          <td>Applications crash or lose entered order data when network signals drop in underground retail markets.</td>
+          <td>Architect a 3-tier fallback persistence layer syncing with Supabase and saving permanently to local browser storage.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">G5</td>
+          <td>Order calculation formulas and tax computations are hidden inside proprietary backend ERP logic, preventing on-the-spot verification.</td>
+          <td>Show clear formulas for case packs, unit pricing, GST tax percentages, and order totals right in the interface.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">G6</td>
+          <td>Simple field forms accept invalid inputs (negative case packs, blank retailer names, non-numeric phone numbers) without clear feedback.</td>
+          <td>Validate every input on the client and server, displaying immediate descriptive error notifications.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 10: CHAPTER 3 - MOTIVATION & PROBLEM STATEMENT (Page 4) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">4</div>
+    <h1 class="chapter-title">3. MOTIVATION, PROBLEM STATEMENT AND OBJECTIVES</h1>
+    <h2 class="section-title">3.1 Motivation</h2>
+
+    <p>
+      Field distribution and secondary order logistics form the backbone of commercial trade across India and developing economies. Sales managers, distributor stockists, and retail shopkeepers frequently face routine questions: has the beat sales rep visited the store today, how much stock remains in the local depot, what is the outstanding credit balance of the retailer, and how close is the team to reaching its monthly sales quota? Answering these questions manually requires repeated phone calls, paper ledgers, and fragmented WhatsApp messages, where human error can lead to delayed deliveries or lost revenue.
+    </p>
+
+    <p>
+      As students of computer science and engineering, we wanted to turn this repeated manual workflow into a robust, cloud-enabled web application. Another motivation was practical learning: building FieldAssist gave us an opportunity to integrate React 19, TypeScript, Tailwind CSS, Leaflet geospatial mapping, Vercel Serverless micro-services, and Supabase cloud PostgreSQL into a cohesive, production-grade project. We also wanted to engineer a system that shows its operational logic openly, allowing field managers to audit every calculation and geofence verification without treating the system as a mysterious black box.
+    </p>
+
+    <h2 class="section-title">3.2 Problem statement</h2>
+
+    <p>
+      Distributors and sales managers need a reliable, cost-free method to track field sales force operations, verify on-ground store visits, manage retailer credit exposure, and process secondary sales orders in real time. Conducting these operations manually on paper or through disjointed spreadsheets is slow, error-prone, and susceptible to proxy check-ins where field reps claim visits without traveling to the outlet. The problem addressed by this project is to provide a unified web interface that automates order collection, calculates order values consistently, enforces physical geofence verification, and persists data permanently to cloud storage.
+    </p>
+
+    <p>
+      The system centralises operational tasks into one interface, eliminates paper order transcription, and provides visual GIS telemetry. It can be used by small-to-medium consumer goods companies, wholesale stockists, and classroom demonstrations. However, it relies on browser-accessible GPS coordinates and user-submitted data, and it does not interface directly with legacy mainframe manufacturing ERP systems, automated vehicle OBD sensors, or physical credit card swipe machines. It is therefore designed specifically for secondary sales automation and route monitoring.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 11: CHAPTER 3 - OBJECTIVES (Page 5) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">5</div>
+    <h2 class="section-title">3.3 Objectives</h2>
+
+    <p>
+      The aim of the project is to develop a cloud-enabled, web-based Field Sales Force Automation & Secondary Distribution Management System that tracks live representative telemetry, verifies store visits via geofencing, manages retail accounts, and automates order booking with transparent formulas and resilient data storage.
+    </p>
+
+    <p>
+      The specific objectives of the project are:
+    </p>
+
+    <p>
+      1. &nbsp;&nbsp; To build a Live GPS Fleet Radar utilizing OpenStreetMap tiles and Leaflet without commercial API fees.<br>
+      2. &nbsp;&nbsp; To acquire device location via the HTML5 Geolocation API with multi-tier network fallback.<br>
+      3. &nbsp;&nbsp; To implement automated geofence boundary detection (100-meter radius) using the Haversine formula.<br>
+      4. &nbsp;&nbsp; To calculate secondary order totals from case pack size, unit price, quantity, and GST percentages.<br>
+      5. &nbsp;&nbsp; To maintain an interactive Retailer Storefront Directory with credit limits and outstanding balances.<br>
+      6. &nbsp;&nbsp; To provide a digital Product SKU Catalog with real-time stock-in-hand inventory alerts.<br>
+      7. &nbsp;&nbsp; To build a responsive user interface with dashboard cards, map controls, modal forms, and toast messages.<br>
+      8. &nbsp;&nbsp; To architect a permanent, three-tier cloud persistence layer using Supabase PostgreSQL and local storage.<br>
+      9. &nbsp;&nbsp; To test normal, boundary, and invalid operational inputs across all system modules.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 12: CHAPTER 4 - SYSTEM ARCHITECTURE (Page 6) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">6</div>
+    <h1 class="chapter-title">4. SYSTEM ARCHITECTURE</h1>
+    <h2 class="section-title">4.1 Architecture overview</h2>
+
+    <p>
+      The system follows a modern decoupled client-serverless architecture: the user interacts with the React 19 single-page application in the browser, client-side actions trigger asynchronous REST requests to Vercel Serverless micro-services, Python/TypeScript backend handlers validate and query Supabase PostgreSQL, map tiles are fetched directly from OpenStreetMap servers, and updated state is rendered dynamically.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="600" height="230" viewBox="0 0 650 250">
+        <!-- Background -->
+        <rect x="10" y="10" width="630" height="230" rx="8" fill="#1e293b" />
+        
+        <!-- Browser Client Box -->
+        <rect x="35" y="40" width="130" height="60" rx="6" fill="#3b82f6" />
+        <text x="100" y="65" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">Browser Client</text>
+        <text x="100" y="82" fill="#dbeafe" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">React 19 + Vite</text>
+        
+        <!-- Arrow 1 -->
+        <line x1="165" y1="70" x2="205" y2="70" stroke="#ffffff" stroke-width="2" marker-end="url(#arrow)" />
+        
+        <!-- Serverless API Box -->
+        <rect x="210" y="40" width="135" height="60" rx="6" fill="#059669" />
+        <text x="277" y="65" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">Serverless API</text>
+        <text x="277" y="82" fill="#d1fae5" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Vercel Functions</text>
+        
+        <!-- Arrow 2 -->
+        <line x1="345" y1="70" x2="385" y2="70" stroke="#ffffff" stroke-width="2" />
+        
+        <!-- Validation Box -->
+        <rect x="390" y="40" width="105" height="60" rx="6" fill="#0d9488" />
+        <text x="442" y="65" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">Validation</text>
+        <text x="442" y="82" fill="#ccfbf1" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Input Checks</text>
+        
+        <!-- Arrow 3 -->
+        <line x1="495" y1="70" x2="530" y2="70" stroke="#ffffff" stroke-width="2" />
+        
+        <!-- Calculation Box -->
+        <rect x="535" y="40" width="90" height="60" rx="6" fill="#0891b2" />
+        <text x="580" y="65" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">Formulas</text>
+        <text x="580" y="82" fill="#cffafe" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Haversine/GST</text>
+
+        <!-- Down Arrow from Calculation to Result Data -->
+        <line x1="580" y1="100" x2="580" y2="135" stroke="#ffffff" stroke-width="2" />
+
+        <!-- Supabase Cloud DB Box -->
+        <rect x="495" y="140" width="130" height="60" rx="6" fill="#10b981" />
+        <text x="560" y="165" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">Supabase DB</text>
+        <text x="560" y="182" fill="#d1fae5" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">PostgreSQL 15+</text>
+
+        <!-- Left Arrow from Supabase to Local Storage -->
+        <line x1="495" y1="170" x2="435" y2="170" stroke="#ffffff" stroke-width="2" />
+
+        <!-- Local Cache Box -->
+        <rect x="290" y="140" width="140" height="60" rx="6" fill="#6366f1" />
+        <text x="360" y="165" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">Local Storage</text>
+        <text x="360" y="182" fill="#e0e7ff" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Offline Cache</text>
+
+        <!-- Left Arrow from Cache to Browser -->
+        <line x1="290" y1="170" x2="200" y2="170" stroke="#ffffff" stroke-width="2" />
+
+        <!-- OpenStreetMap Tile Provider -->
+        <rect x="45" y="140" width="150" height="60" rx="6" fill="#8b5cf6" />
+        <text x="120" y="165" fill="#ffffff" font-family="'Times New Roman', serif" font-size="13" font-weight="bold" text-anchor="middle">OpenStreetMap</text>
+        <text x="120" y="182" fill="#ede9fe" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Public Tile Server</text>
+
+        <!-- Up Arrow from OSM to Browser -->
+        <line x1="100" y1="140" x2="100" y2="105" stroke="#ffffff" stroke-width="2" />
+      </svg>
+    </div>
+    <div class="caption">Figure 1: System architecture and request-response flow</div>
+
+    <h2 class="section-title">4.2 Layers of the architecture</h2>
+
+    <p>
+      The architecture consists of three robust layers:
+    </p>
+    <p>
+      <strong>Presentation Layer (Client-Side Browser):</strong> Built with React 19 and Tailwind CSS, this layer renders interactive views including the live Leaflet map canvas, inventory tables, order entry forms, and analytical KPI cards. It manages local UI state and captures hardware geolocation coordinates.
+    </p>
+    <p>
+      <strong>Application & API Layer (Vercel Serverless Functions):</strong> Decoupled micro-service endpoints located in <code>/api/*</code> receive REST HTTP requests, execute input validation, calculate Haversine distances, process order line-totals, and enforce data schema integrity.
+    </p>
+    <p>
+      <strong>Data & Persistence Layer (Cloud & Offline Hybrid):</strong> Primary storage resides in Supabase cloud PostgreSQL with Row Level Security (RLS) policies. When offline, the client automatically falls back to an internal browser <code>localStorage</code> cache, guaranteeing that entered orders and logs are never lost.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 13: CHAPTER 4 - TECH STACK & FILES (Page 7) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">7</div>
+    <h2 class="section-title">4.3 Technology stack</h2>
+
+    <div class="caption">Table 3: Technology stack and role of each part</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Part</th>
+          <th style="width: 30%;">Technology</th>
+          <th style="width: 45%;">Role in the system</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold">User Interface</td>
+          <td>React 19 & TypeScript</td>
+          <td>Component-based rendering, reactive state, and static type safety.</td>
+        </tr>
+        <tr>
+          <td class="bold">Styling & Theme</td>
+          <td>Tailwind CSS v4</td>
+          <td>Responsive dark theme layout, grid structures, and UI transitions.</td>
+        </tr>
+        <tr>
+          <td class="bold">Interactive Maps</td>
+          <td>Leaflet & OpenStreetMap</td>
+          <td>Renders raster tiles, pulsing GPS pins, outlet markers, and trails.</td>
+        </tr>
+        <tr>
+          <td class="bold">Serverless Backend</td>
+          <td>Vercel Serverless Functions</td>
+          <td>Processes REST endpoints (<code>/api/orders</code>, <code>/api/products</code>, etc.).</td>
+        </tr>
+        <tr>
+          <td class="bold">Cloud Database</td>
+          <td>Supabase (PostgreSQL 15+)</td>
+          <td>Managed relational storage for retailers, products, orders, and reps.</td>
+        </tr>
+        <tr>
+          <td class="bold">Client Persistence</td>
+          <td>Browser LocalStorage</td>
+          <td>Stores auth tokens, offline backup records, and local product catalogs.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">4.4 Project files and components</h2>
+
+    <p>
+      The main directory structures and source components of the project are described in the table below.
+    </p>
+
+    <div class="caption">Table 4: Project files and components</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 35%;">File / folder</th>
+          <th style="width: 65%;">Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>src/components/maps/ProductStockMap.tsx</code></td>
+          <td>Leaflet map component rendering live device GPS, nearby outlets, and stock.</td>
+        </tr>
+        <tr>
+          <td><code>src/components/maps/LiveGpsMap.tsx</code></td>
+          <td>Fleet telemetry radar showing rep locations, geofences, and breadcrumb trails.</td>
+        </tr>
+        <tr>
+          <td><code>src/pages/Products.tsx</code></td>
+          <td>Product SKU catalog, stock adjustment forms, and map/grid view toggles.</td>
+        </tr>
+        <tr>
+          <td><code>src/pages/Orders.tsx</code></td>
+          <td>Secondary order booking form, line item calculation, and order tracking table.</td>
+        </tr>
+        <tr>
+          <td><code>src/pages/Retailers.tsx</code></td>
+          <td>Retailer directory, credit scoring, contact information, and onboarding form.</td>
+        </tr>
+        <tr>
+          <td><code>src/utils/geolocation.ts</code></td>
+          <td>Multi-tier GPS acquisition utility (Hardware Satellite &rarr; WiFi &rarr; IP fallback).</td>
+        </tr>
+        <tr>
+          <td><code>api/products.ts</code> & <code>api/orders.ts</code></td>
+          <td>Serverless handlers connecting to Supabase with fallback to local persistent store.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 14: CHAPTER 5 - SYSTEM DESIGN & USE CASE (Page 8) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">8</div>
+    <h1 class="chapter-title">5. SYSTEM DESIGN</h1>
+
+    <p>
+      This chapter describes the design of the system using UML diagrams (use case, class, object, sequence, activity, state chart, communication, component and deployment diagrams) and a data flow diagram. The system consists of five primary functional modules: the Live GPS Telemetry Radar, the Retailer Account Directory, the Product SKU Catalog, the Secondary Order Booking Engine, and the Geofenced Visit Validation Module.
+    </p>
+
+    <h2 class="section-title">5.1 Use case diagram</h2>
+
+    <p>
+      The primary actors are the Sales Representative, the Regional Sales Manager, and the System Administrator. The user can execute any of the five core modules, each including client-side validation and permanent database synchronization.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="580" height="280" viewBox="0 0 600 290">
+        <!-- Boundary Box -->
+        <rect x="140" y="20" width="430" height="250" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.5" />
+        <text x="355" y="42" fill="#0f172a" font-family="'Times New Roman', serif" font-size="12" font-weight="bold" text-anchor="middle">FieldAssist System</text>
+
+        <!-- User Actor -->
+        <circle cx="50" cy="115" r="16" fill="#ffffff" stroke="#000000" stroke-width="1.5" />
+        <line x1="50" y1="131" x2="50" y2="175" stroke="#000000" stroke-width="1.5" />
+        <line x1="25" y1="145" x2="75" y2="145" stroke="#000000" stroke-width="1.5" />
+        <line x1="50" y1="175" x2="30" y2="215" stroke="#000000" stroke-width="1.5" />
+        <line x1="50" y1="175" x2="70" y2="215" stroke="#000000" stroke-width="1.5" />
+        <text x="50" y="235" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">User / Sales Rep</text>
+
+        <!-- Use Cases (Ellipses) -->
+        <ellipse cx="230" cy="75" rx="65" ry="20" fill="#e2e8f0" stroke="#475569" stroke-width="1" />
+        <text x="230" y="79" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Book Sales Order</text>
+
+        <ellipse cx="230" cy="125" rx="65" ry="20" fill="#e2e8f0" stroke="#475569" stroke-width="1" />
+        <text x="230" y="129" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Inspect Stock Map</text>
+
+        <ellipse cx="230" cy="175" rx="65" ry="20" fill="#e2e8f0" stroke="#475569" stroke-width="1" />
+        <text x="230" y="179" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">View Fleet Radar</text>
+
+        <ellipse cx="230" cy="225" rx="65" ry="20" fill="#e2e8f0" stroke="#475569" stroke-width="1" />
+        <text x="230" y="229" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Manage Retailers</text>
+
+        <!-- Validate Inputs Ellipse -->
+        <ellipse cx="460" cy="150" rx="70" ry="22" fill="#fee2e2" stroke="#dc2626" stroke-width="1" />
+        <text x="460" y="154" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" fill="#991b1b" text-anchor="middle">Validate Inputs & GPS</text>
+
+        <!-- Lines from User to Use Cases -->
+        <line x1="75" y1="140" x2="165" y2="75" stroke="#334155" stroke-width="1.2" />
+        <line x1="75" y1="145" x2="165" y2="125" stroke="#334155" stroke-width="1.2" />
+        <line x1="75" y1="150" x2="165" y2="175" stroke="#334155" stroke-width="1.2" />
+        <line x1="75" y1="155" x2="165" y2="225" stroke="#334155" stroke-width="1.2" />
+
+        <!-- Include Lines to Validate Inputs -->
+        <line x1="295" y1="75" x2="395" y2="140" stroke="#dc2626" stroke-dasharray="4,3" stroke-width="1" />
+        <line x1="295" y1="125" x2="390" y2="150" stroke="#dc2626" stroke-dasharray="4,3" stroke-width="1" />
+        <line x1="295" y1="175" x2="390" y2="155" stroke="#dc2626" stroke-dasharray="4,3" stroke-width="1" />
+        <line x1="295" y1="225" x2="395" y2="160" stroke="#dc2626" stroke-dasharray="4,3" stroke-width="1" />
+        <text x="345" y="105" font-family="'Times New Roman', serif" font-size="9" fill="#dc2626">&lt;&lt;include&gt;&gt;</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 2: Use case diagram</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 15: CHAPTER 5 - CLASS & OBJECT DIAGRAMS (Page 9) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">9</div>
+    <h2 class="section-title">5.2 Class diagram</h2>
+
+    <p>
+      The class diagram illustrates the primary logical data models and services behind the FieldAssist architecture. The React components submit orders and telemetry to API services, which utilize a validator utility and interact with the Supabase client.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="580" height="200" viewBox="0 0 600 210">
+        <!-- Main Controller Class -->
+        <rect x="220" y="10" width="160" height="65" fill="#f8fafc" stroke="#334155" stroke-width="1.5" />
+        <text x="300" y="28" font-family="'Times New Roman', serif" font-size="12" font-weight="bold" text-anchor="middle">FieldAssistApp</text>
+        <line x1="220" y1="34" x2="380" y2="34" stroke="#334155" />
+        <text x="228" y="48" font-family="'Times New Roman', serif" font-size="10">+ bookOrder()</text>
+        <text x="228" y="60" font-family="'Times New Roman', serif" font-size="10">+ trackFleet()</text>
+        <text x="228" y="72" font-family="'Times New Roman', serif" font-size="10">+ inspectStock()</text>
+
+        <!-- Branch Arrows -->
+        <line x1="250" y1="75" x2="90" y2="115" stroke="#334155" stroke-width="1.2" />
+        <line x1="280" y1="75" x2="220" y2="115" stroke="#334155" stroke-width="1.2" />
+        <line x1="320" y1="75" x2="360" y2="115" stroke="#334155" stroke-width="1.2" />
+        <line x1="350" y1="75" x2="500" y2="115" stroke="#334155" stroke-width="1.2" />
+
+        <!-- Subclasses -->
+        <rect x="20" y="115" width="130" height="60" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+        <text x="85" y="132" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">InputValidator</text>
+        <line x1="20" y1="138" x2="150" y2="138" stroke="#334155" />
+        <text x="26" y="152" font-family="'Times New Roman', serif" font-size="9.5">+ checkNumeric()</text>
+        <text x="26" y="165" font-family="'Times New Roman', serif" font-size="9.5">+ checkPositive()</text>
+
+        <rect x="165" y="115" width="130" height="60" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+        <text x="230" y="132" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">OrderEngine</text>
+        <line x1="165" y1="138" x2="295" y2="138" stroke="#334155" />
+        <text x="171" y="152" font-family="'Times New Roman', serif" font-size="9.5">+ calcTotal()</text>
+        <text x="171" y="165" font-family="'Times New Roman', serif" font-size="9.5">+ reserveStock()</text>
+
+        <rect x="310" y="115" width="130" height="60" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+        <text x="375" y="132" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">GeofenceService</text>
+        <line x1="310" y1="138" x2="440" y2="138" stroke="#334155" />
+        <text x="316" y="152" font-family="'Times New Roman', serif" font-size="9.5">+ haversineDist()</text>
+        <text x="316" y="165" font-family="'Times New Roman', serif" font-size="9.5">+ verifyCheckIn()</text>
+
+        <rect x="455" y="115" width="130" height="60" fill="#f8fafc" stroke="#334155" stroke-width="1.2" />
+        <text x="520" y="132" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">SupabaseSync</text>
+        <line x1="455" y1="138" x2="585" y2="138" stroke="#334155" />
+        <text x="461" y="152" font-family="'Times New Roman', serif" font-size="9.5">+ cloudSync()</text>
+        <text x="461" y="165" font-family="'Times New Roman', serif" font-size="9.5">+ offlineFallback()</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 3: Class diagram</div>
+
+    <h2 class="section-title">5.3 Object diagram</h2>
+
+    <p>
+      The object diagram shows one concrete instance using example data from Chapter 7: ordering 10 cases of Pure Hydration Coconut Water for Gupta Kirana Stores produces a total order value of &#8377;10,080.
+    </p>
+
+    <div class="diagram-container">
+      <div class="diagram-box" style="text-align: left; width: 220px;">
+        <div class="bold" style="border-bottom: 1px solid #777; padding-bottom: 2pt;">o1 : OrderInstance</div>
+        <div style="font-size: 10pt; line-height: 1.5; padding-top: 3pt;">
+          sku = "BEV-PHC-500"<br>
+          case_qty = 10<br>
+          unit_price = &#8377;42.00<br>
+          case_size = 24
+        </div>
+      </div>
+      <div style="margin: 4pt 0;">&#8595; <span style="font-size: 10pt;">produces</span></div>
+      <div class="diagram-box" style="text-align: left; width: 220px;">
+        <div class="bold" style="border-bottom: 1px solid #777; padding-bottom: 2pt;">r1 : OrderResult</div>
+        <div style="font-size: 10pt; line-height: 1.5; padding-top: 3pt;">
+          subtotal = &#8377;10,080.00<br>
+          status = "Approved"
+        </div>
+      </div>
+    </div>
+    <div class="caption">Figure 4: Object diagram (example values)</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 16: CHAPTER 5 - SEQUENCE & ACTIVITY DIAGRAMS (Page 10) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">10</div>
+    <h2 class="section-title">5.4 Sequence diagram</h2>
+
+    <p>
+      The sequence diagram shows the message passing order between the sales executive, browser UI, serverless API endpoint, calculation validator, and Supabase cloud database during a single order placement request.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="550" height="200" viewBox="0 0 580 210">
+        <!-- Lifeline Entities -->
+        <rect x="30" y="10" width="70" height="26" fill="#e2e8f0" stroke="#334155" rx="3"/>
+        <text x="65" y="27" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">Sales Rep</text>
+        <line x1="65" y1="36" x2="65" y2="190" stroke="#94a3b8" stroke-dasharray="4,4"/>
+
+        <rect x="140" y="10" width="70" height="26" fill="#e2e8f0" stroke="#334155" rx="3"/>
+        <text x="175" y="27" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">Browser UI</text>
+        <line x1="175" y1="36" x2="175" y2="190" stroke="#94a3b8" stroke-dasharray="4,4"/>
+
+        <rect x="250" y="10" width="80" height="26" fill="#e2e8f0" stroke="#334155" rx="3"/>
+        <text x="290" y="27" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">Serverless API</text>
+        <line x1="290" y1="36" x2="290" y2="190" stroke="#94a3b8" stroke-dasharray="4,4"/>
+
+        <rect x="365" y="10" width="80" height="26" fill="#e2e8f0" stroke="#334155" rx="3"/>
+        <text x="405" y="27" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">OrderEngine</text>
+        <line x1="405" y1="36" x2="405" y2="190" stroke="#94a3b8" stroke-dasharray="4,4"/>
+
+        <rect x="475" y="10" width="85" height="26" fill="#e2e8f0" stroke="#334155" rx="3"/>
+        <text x="517" y="27" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">Supabase DB</text>
+        <line x1="517" y1="36" x2="517" y2="190" stroke="#94a3b8" stroke-dasharray="4,4"/>
+
+        <!-- Message Arrows -->
+        <line x1="65" y1="60" x2="175" y2="60" stroke="#000000" stroke-width="1.2"/>
+        <text x="120" y="54" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">1: submit order</text>
+
+        <line x1="175" y1="85" x2="290" y2="85" stroke="#000000" stroke-width="1.2"/>
+        <text x="232" y="79" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">2: POST /api/orders</text>
+
+        <line x1="290" y1="110" x2="405" y2="110" stroke="#000000" stroke-width="1.2"/>
+        <text x="347" y="104" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">3: validate & calculate</text>
+
+        <line x1="405" y1="135" x2="517" y2="135" stroke="#000000" stroke-width="1.2"/>
+        <text x="461" y="129" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">4: insert order</text>
+
+        <line x1="517" y1="160" x2="175" y2="160" stroke="#000000" stroke-dasharray="4,3" stroke-width="1.2"/>
+        <text x="346" y="154" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">5: HTTP 201 Created & synced</text>
+
+        <line x1="175" y1="180" x2="65" y2="180" stroke="#000000" stroke-dasharray="4,3" stroke-width="1.2"/>
+        <text x="120" y="175" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">6: show confirmation toast</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 5: Sequence diagram for one order request</div>
+
+    <h2 class="section-title">5.5 Activity diagram</h2>
+
+    <p>
+      The activity diagram illustrates the decision flow when a sales representative initiates an on-ground store visit check-in, verifying GPS availability, accuracy boundaries, and geofence threshold rules.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="350" height="230" viewBox="0 0 350 240">
+        <!-- Start Node -->
+        <circle cx="175" cy="18" r="8" fill="#000000" />
+        <line x1="175" y1="26" x2="175" y2="45" stroke="#000000" stroke-width="1.2" />
+
+        <!-- Enter GPS Check-in -->
+        <rect x="105" y="45" width="140" height="28" rx="6" fill="#e2e8f0" stroke="#334155" />
+        <text x="175" y="63" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Acquire GPS Coordinates</text>
+        <line x1="175" y1="73" x2="175" y2="92" stroke="#000000" stroke-width="1.2" />
+
+        <!-- Decision Diamond -->
+        <polygon points="175,92 215,110 175,128 135,110" fill="#fef08a" stroke="#ca8a04" />
+        <text x="175" y="113" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Dist &le; 100m?</text>
+
+        <!-- No Branch -->
+        <line x1="215" y1="110" x2="265" y2="110" stroke="#000000" stroke-width="1.2" />
+        <text x="238" y="104" font-family="'Times New Roman', serif" font-size="9">No</text>
+        <rect x="235" y="130" width="105" height="32" rx="6" fill="#fee2e2" stroke="#dc2626" />
+        <text x="287" y="146" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Flag Outside</text>
+        <text x="287" y="157" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">Geofence Warning</text>
+        <line x1="265" y1="110" x2="265" y2="130" stroke="#000000" stroke-width="1.2" />
+
+        <!-- Yes Branch -->
+        <line x1="175" y1="128" x2="175" y2="148" stroke="#000000" stroke-width="1.2" />
+        <text x="183" y="139" font-family="'Times New Roman', serif" font-size="9">Yes</text>
+        <rect x="110" y="148" width="130" height="28" rx="6" fill="#dcfce7" stroke="#16a34a" />
+        <text x="175" y="165" font-family="'Times New Roman', serif" font-size="10" text-anchor="middle">Mark Verified Check-In</text>
+
+        <!-- Merge to End Node -->
+        <line x1="175" y1="176" x2="175" y2="200" stroke="#000000" stroke-width="1.2" />
+        <line x1="287" y1="162" x2="287" y2="200" stroke="#000000" stroke-width="1.2" />
+        <line x1="287" y1="200" x2="185" y2="200" stroke="#000000" stroke-width="1.2" />
+
+        <!-- End Node -->
+        <circle cx="175" cy="205" r="9" fill="none" stroke="#000000" stroke-width="1.5" />
+        <circle cx="175" cy="205" r="5" fill="#000000" />
+      </svg>
+    </div>
+    <div class="caption">Figure 6: Activity diagram of store check-in</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 17: CHAPTER 5 - STATE & COMMUNICATION DIAGRAMS (Page 11) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">11</div>
+    <h2 class="section-title">5.6 State chart diagram</h2>
+
+    <p>
+      The state chart shows the operational states of an order booking transaction: the user selects products, inputs case packs, validates credit limits, and reaches an Approved or Error state.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="450" height="110" viewBox="0 0 480 120">
+        <circle cx="30" cy="55" r="7" fill="#000000" />
+        <line x1="37" y1="55" x2="70" y2="55" stroke="#000000" stroke-width="1.2" />
+
+        <rect x="70" y="38" width="80" height="34" rx="6" fill="#f1f5f9" stroke="#334155" />
+        <text x="110" y="59" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Order Form</text>
+
+        <line x1="150" y1="55" x2="200" y2="55" stroke="#000000" stroke-width="1.2" />
+        <text x="175" y="48" font-family="'Times New Roman', serif" font-size="8.5" text-anchor="middle">submit</text>
+
+        <rect x="200" y="38" width="90" height="34" rx="6" fill="#e2e8f0" stroke="#334155" />
+        <text x="245" y="59" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Validating</text>
+
+        <path d="M 290 48 Q 335 25 380 40" fill="none" stroke="#000000" stroke-width="1.2" />
+        <text x="335" y="27" font-family="'Times New Roman', serif" font-size="8.5" text-anchor="middle">valid</text>
+
+        <rect x="380" y="25" width="80" height="34" rx="6" fill="#dcfce7" stroke="#16a34a" />
+        <text x="420" y="46" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Approved</text>
+
+        <path d="M 290 62 Q 335 85 380 75" fill="none" stroke="#000000" stroke-width="1.2" />
+        <text x="335" y="85" font-family="'Times New Roman', serif" font-size="8.5" text-anchor="middle">invalid</text>
+
+        <rect x="380" y="65" width="80" height="34" rx="6" fill="#fee2e2" stroke="#dc2626" />
+        <text x="420" y="86" font-family="'Times New Roman', serif" font-size="10.5" text-anchor="middle">Error</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 7: State chart diagram</div>
+
+    <h2 class="section-title">5.7 Communication (collaboration) diagram</h2>
+
+    <p>
+      The communication diagram shows the message sequencing between objects during a product inventory update request.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="500" height="70" viewBox="0 0 520 80">
+        <rect x="20" y="20" width="80" height="36" fill="#e2e8f0" stroke="#334155" rx="3" />
+        <text x="60" y="42" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">:User</text>
+
+        <line x1="100" y1="38" x2="160" y2="38" stroke="#000000" stroke-width="1.2" />
+        <text x="130" y="30" font-family="'Times New Roman', serif" font-size="8.5" text-anchor="middle">1: update</text>
+
+        <rect x="160" y="20" width="90" height="36" fill="#e2e8f0" stroke="#334155" rx="3" />
+        <text x="205" y="42" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">:Browser</text>
+
+        <line x1="250" y1="38" x2="310" y2="38" stroke="#000000" stroke-width="1.2" />
+        <text x="280" y="30" font-family="'Times New Roman', serif" font-size="8.5" text-anchor="middle">2: PATCH</text>
+
+        <rect x="310" y="20" width="90" height="36" fill="#e2e8f0" stroke="#334155" rx="3" />
+        <text x="355" y="42" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">:ProductsApi</text>
+
+        <line x1="400" y1="38" x2="450" y2="38" stroke="#000000" stroke-width="1.2" />
+        <text x="425" y="30" font-family="'Times New Roman', serif" font-size="8.5" text-anchor="middle">3: sync</text>
+
+        <rect x="450" y="20" width="80" height="36" fill="#e2e8f0" stroke="#334155" rx="3" />
+        <text x="490" y="42" font-family="'Times New Roman', serif" font-size="11" text-anchor="middle">:Supabase</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 8: Communication diagram</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 18: CHAPTER 5 - COMPONENT & DEPLOYMENT DIAGRAMS (Page 12) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">12</div>
+    <h2 class="section-title">5.8 Component diagram</h2>
+
+    <p>
+      The component diagram groups the architectural elements into presentation components (React UI and Leaflet), serverless middleware functions, and cloud data resources.
+    </p>
+
+    <div class="diagram-container">
+      <div class="diagram-box" style="width: 250px; text-align: center; margin-bottom: 6pt;">
+        <strong>React UI & Leaflet Maps</strong>
+      </div>
+      <div style="font-size: 11pt;">&#8595;</div>
+      <div class="diagram-box" style="width: 250px; text-align: center; margin-bottom: 6pt;">
+        <strong>Vercel Serverless Handlers (/api/*)</strong>
+      </div>
+      <div style="font-size: 11pt;">&#8595;</div>
+      <div class="diagram-box" style="width: 250px; text-align: center; margin-bottom: 6pt;">
+        <strong>Haversine & Order Calculation Engine</strong>
+      </div>
+      <div style="font-size: 11pt;">&#8595;</div>
+      <div class="diagram-box" style="width: 250px; text-align: center;">
+        <strong>Supabase PostgreSQL & LocalStorage</strong>
+      </div>
+    </div>
+    <div class="caption">Figure 9: Component diagram</div>
+
+    <h2 class="section-title">5.9 Deployment diagram</h2>
+
+    <p>
+      The system is deployed on global edge infrastructure. The client browser communicates with Vercel edge functions over HTTPS, connects directly to Supabase cloud PostgreSQL for data syncing, and fetches raster tiles from OpenStreetMap.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="480" height="150" viewBox="0 0 520 160">
+        <rect x="20" y="20" width="480" height="120" rx="6" fill="#f8fafc" stroke="#334155" stroke-dasharray="4,4" />
+        <text x="260" y="38" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">Distributed Cloud Deployment</text>
+
+        <rect x="40" y="55" width="120" height="60" fill="#e2e8f0" stroke="#334155" rx="4" />
+        <text x="100" y="80" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">Client Device</text>
+        <text x="100" y="98" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Desktop / Mobile</text>
+
+        <line x1="160" y1="75" x2="220" y2="75" stroke="#000000" stroke-width="1.2" />
+        <line x1="220" y1="95" x2="160" y2="95" stroke="#000000" stroke-dasharray="3,3" stroke-width="1.2" />
+
+        <rect x="220" y="55" width="130" height="60" fill="#e2e8f0" stroke="#334155" rx="4" />
+        <text x="285" y="80" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">Vercel Edge</text>
+        <text x="285" y="98" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Node.js Serverless</text>
+
+        <line x1="350" y1="85" x2="390" y2="85" stroke="#000000" stroke-width="1.2" />
+
+        <rect x="390" y="55" width="95" height="60" fill="#dcfce7" stroke="#16a34a" rx="4" />
+        <text x="437" y="80" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">Supabase</text>
+        <text x="437" y="98" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Cloud PG DB</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 10: Deployment diagram</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 19: CHAPTER 5 - DATA FLOW DIAGRAM (Page 13) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">13</div>
+    <h2 class="section-title">5.10 Data flow diagram (DFD)</h2>
+
+    <p>
+      A data flow diagram demonstrates how operational information moves through the system during a secondary sales booking cycle.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="500" height="150" viewBox="0 0 520 160">
+        <!-- External Entity: User -->
+        <rect x="20" y="55" width="70" height="40" fill="#e2e8f0" stroke="#334155" />
+        <text x="55" y="79" font-family="'Times New Roman', serif" font-size="11" font-weight="bold" text-anchor="middle">Sales Rep</text>
+
+        <!-- Arrow 1 -->
+        <line x1="90" y1="75" x2="140" y2="75" stroke="#000000" stroke-width="1.2" />
+
+        <!-- Process 1: Validate -->
+        <circle cx="175" cy="75" r="32" fill="#dbeafe" stroke="#2563eb" />
+        <text x="175" y="72" font-family="'Times New Roman', serif" font-size="10" font-weight="bold" text-anchor="middle">1.0</text>
+        <text x="175" y="84" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Validate</text>
+
+        <!-- Arrow 2 -->
+        <line x1="207" y1="75" x2="260" y2="75" stroke="#000000" stroke-width="1.2" />
+
+        <!-- Process 2: Calculate -->
+        <circle cx="295" cy="75" r="32" fill="#dcfce7" stroke="#16a34a" />
+        <text x="295" y="72" font-family="'Times New Roman', serif" font-size="10" font-weight="bold" text-anchor="middle">2.0</text>
+        <text x="295" y="84" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Calculate</text>
+
+        <!-- Arrow 3 -->
+        <line x1="327" y1="75" x2="380" y2="75" stroke="#000000" stroke-width="1.2" />
+
+        <!-- Process 3: Render -->
+        <circle cx="415" cy="75" r="32" fill="#fef08a" stroke="#ca8a04" />
+        <text x="415" y="72" font-family="'Times New Roman', serif" font-size="10" font-weight="bold" text-anchor="middle">3.0</text>
+        <text x="415" y="84" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Render</text>
+
+        <!-- Feedback to User -->
+        <path d="M 415 107 Q 255 155 55 95" fill="none" stroke="#000000" stroke-width="1.2" />
+        <text x="255" y="145" font-family="'Times New Roman', serif" font-size="9" text-anchor="middle">order confirmed / updated map view</text>
+      </svg>
+    </div>
+    <div class="caption">Figure 11: Data flow diagram</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 20: CHAPTER 6 - METHODOLOGY (Page 14) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">14</div>
+    <h1 class="chapter-title">6. METHODOLOGY</h1>
+    <h2 class="section-title">6.1 Development approach</h2>
+
+    <p>
+      We followed an iterative Agile development methodology. We began by identifying the operational requirements of FMCG field sales operations: live rep positioning, store check-in verification, SKU cataloging, and order booking. Next, we designed relational database tables in Supabase PostgreSQL, established decoupled Vercel Serverless micro-services, and built user interface components using React 19 and Tailwind CSS. OpenStreetMap tiles were integrated using Leaflet, and a robust three-tier offline persistence mechanism was engineered to ensure zero data loss.
+    </p>
+
+    <h2 class="section-title">6.2 Working of the system</h2>
+
+    <p>
+      The system functions as follows:
+    </p>
+    <p>
+      1. &nbsp;&nbsp; The sales executive or manager logs in via the browser and selects their operational view (Live Tracking, Products, Orders, or Retailers).<br>
+      2. &nbsp;&nbsp; On opening the Live Tracking Radar or Products Map, the browser prompts for GPS location access. The multi-tier geolocation service locks the real hardware GPS coordinates.<br>
+      3. &nbsp;&nbsp; When a sales rep checks into a store, the system calculates the Haversine distance between the rep's coordinates and the store's registered latitude and longitude.<br>
+      4. &nbsp;&nbsp; If the distance is within 100 meters, the visit is authenticated as "Geofence Verified". If greater, a visual advisory warning is logged.<br>
+      5. &nbsp;&nbsp; During secondary order booking, the representative selects SKU codes and case quantities; unit pricing, case multipliers, and tax rates are calculated instantly, and the order is permanently saved to Supabase cloud PostgreSQL.
+    </p>
+
+    <h2 class="section-title">6.3 Frontend and backend</h2>
+
+    <p>
+      On the frontend, modular React 19 components render data tables, modals, interactive Leaflet maps, and real-time KPI cards. Tailwind CSS provides structured dark-theme styling, while Framer Motion handles modal animations. On the backend, Vercel Serverless Functions (Node.js 24) receive requests, validate data payloads, and execute atomic CRUD operations against Supabase.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 21: CHAPTER 6 - FORMULAS & TESTING (Page 15) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">15</div>
+    <h2 class="section-title">6.4 Formulas and units</h2>
+
+    <p>
+      Distance is measured in meters (m) or kilometers (km), currency in Indian Rupees (&#8377;), and stock in whole case packs. The mathematical formulas used in the system are defined in Table 5.
+    </p>
+
+    <div class="caption">Table 5: Formulas and units</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Quantity</th>
+          <th style="width: 45%;">Formula</th>
+          <th style="width: 30%;">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold">Haversine Distance (d)</td>
+          <td>d = 2R &middot; arcsin(&radic;(sin&sup2;(&Delta;&phi;/2) + cos &phi;1 &middot; cos &phi;2 &middot; sin&sup2;(&Delta;&lambda;/2)))</td>
+          <td>R = 6371 km (Earth radius); calculates distance between coordinates.</td>
+        </tr>
+        <tr>
+          <td class="bold">Geofence Compliance</td>
+          <td>Status = (d &le; 100 m) ? "Verified" : "Outside Boundary"</td>
+          <td>100-meter radius threshold for retail storefronts.</td>
+        </tr>
+        <tr>
+          <td class="bold">Order Item Total</td>
+          <td>Total = Quantity (Cases) &times; Case Pack Size &times; Unit Price</td>
+          <td>Total price per line item before applicable taxes.</td>
+        </tr>
+        <tr>
+          <td class="bold">Order Net Total</td>
+          <td>Net = &sum; Total_i &times; (1 + TaxRate_i / 100)</td>
+          <td>Sum of all line items plus applicable GST rate.</td>
+        </tr>
+        <tr>
+          <td class="bold">Monthly Target %</td>
+          <td>Target Achieved % = (Sales Amount / Monthly Target) &times; 100</td>
+          <td>Calculates sales quota fulfillment for representatives.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">6.5 Data handling and validation</h2>
+
+    <p>
+      The application validates all inputs on both client and server: order case counts must be positive integers, retailer names and addresses cannot be blank, phone numbers must adhere to national formatting, and GPS coordinates must fall within realistic geographic boundaries. Erroneous values generate descriptive error toasts, preventing corrupt database writes.
+    </p>
+
+    <h2 class="section-title">6.6 Testing approach</h2>
+
+    <p>
+      Testing was conducted across normal, boundary, and invalid inputs for every module (see Chapter 8). Test cases were verified against hand-calculated values, and live database responses were benchmarked directly on the production Vercel deployment.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 22: CHAPTER 7 - FIELD WORK & DATA (Page 16) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">16</div>
+    <h1 class="chapter-title">7. FIELD WORK DETAILS & DATA COLLECTED</h1>
+    <h2 class="section-title">7.1 Nature of the field work</h2>
+
+    <p>
+      The field work for this project involved the design, deployment, and live operational testing of the web application in real-world retail distribution beats in North Delhi (Rohini-Pitampura commercial cluster). Real retail counter coordinates, SKU price lists, and live device GPS pings were utilized to validate map rendering, geofence accuracy, and cloud synchronization.
+    </p>
+
+    <h2 class="section-title">7.2 Input data used by the system</h2>
+
+    <p>
+      The application processes operational inputs entered by users or captured via hardware sensors, as itemized in Table 6.
+    </p>
+
+    <div class="caption">Table 6: Input values used by the system</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Item</th>
+          <th style="width: 45%;">Description</th>
+          <th style="width: 30%;">Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold">Store Coordinates</td>
+          <td>Latitude and Longitude in decimal degrees (e.g. 28.7185, 77.1265)</td>
+          <td>Pins retail outlets on OpenStreetMap and sets geofences.</td>
+        </tr>
+        <tr>
+          <td class="bold">Device GPS Ping</td>
+          <td>Hardware latitude, longitude, and accuracy radius (&plusmn;m)</td>
+          <td>Tracks sales rep telemetry and validates store check-ins.</td>
+        </tr>
+        <tr>
+          <td class="bold">Product SKU Info</td>
+          <td>SKU Code, Category, MRP, Unit Price, and Case Pack Size</td>
+          <td>Calculates order line items and manages inventory levels.</td>
+        </tr>
+        <tr>
+          <td class="bold">Order Quantities</td>
+          <td>Number of wholesale cases requested per SKU</td>
+          <td>Calculates bulk invoice totals and updates stock-in-hand.</td>
+        </tr>
+        <tr>
+          <td class="bold">Retailer Credit Limit</td>
+          <td>Maximum allowed outstanding balance (e.g. &#8377;50,000)</td>
+          <td>Prevents over-extension of credit during order booking.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">7.3 Worked examples</h2>
+
+    <p>
+      For example, if a sales representative books 10 cases of <em>Pure Hydration Coconut Water 500ml</em> (Unit Price &#8377;42, Case Pack Size 24 units), the total units booked are 10 &times; 24 = 240 bottles, and the order value is 240 &times; &#8377;42 = &#8377;10,080. If the rep's GPS coordinates are 38 meters from the store's registered point, the distance is &le; 100 m, and the check-in is logged as "Geofence Verified".
+    </p>
+
+    <h2 class="section-title">7.4 Application interface (evidence from the running website)</h2>
+
+    <p>
+      Evidence for this project is derived from the live production website deployed at <code>https://fieldassist-phi.vercel.app</code>. The dashboard features responsive telemetry maps, catalog grids, and order forms.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 23: CHAPTER 7 - APPLICATION SCREENSHOTS (Page 17) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">17</div>
+    <div class="center-text" style="font-size: 13pt; font-weight: bold; margin-bottom: 12pt;">
+      7.4 Application interface (evidence from the running website)
+    </div>
+
+    <!-- UI Representation 1 -->
+    <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #0f172a; color: #fff; margin-bottom: 12pt;">
+      <div style="font-size: 11pt; font-weight: bold; color: #38bdf8; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px;">
+        FieldAssist &bull; Live GPS Fleet Telemetry Radar (OpenStreetMap)
+      </div>
+      <div style="font-size: 9.5pt; color: #94a3b8; line-height: 1.4;">
+        &bull; <strong>Active Rep:</strong> Vikram Sharma (Code: FA-REP-101) &nbsp;|&nbsp; <strong>Status:</strong> At Store &nbsp;|&nbsp; <strong>Battery:</strong> 82%<br>
+        &bull; <strong>Current Outlet:</strong> Gupta Kirana Stores &nbsp;|&nbsp; <strong>Distance:</strong> 38m (Inside Geofence: TRUE)<br>
+        &bull; <strong>Active Map Engine:</strong> OpenStreetMap Public Tiles (100% Free, Zero API Keys, No Watermark)
+      </div>
+    </div>
+    <div class="caption">Figure 12: Dashboard – Live GPS Fleet Radar and Geofenced Store Outlets</div>
+
+    <!-- UI Representation 2 -->
+    <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #0f172a; color: #fff; margin-bottom: 12pt;">
+      <div style="font-size: 11pt; font-weight: bold; color: #34d399; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px;">
+        FieldAssist &bull; Product Stock Map & Real Live Location
+      </div>
+      <div style="font-size: 9.5pt; color: #94a3b8; line-height: 1.4;">
+        &bull; <strong>Live Device GPS:</strong> Locked at [28.7188&deg; N, 77.1262&deg; E] (&plusmn;12m accuracy)<br>
+        &bull; <strong>Selected SKU:</strong> Pure Hydration Coconut Water 500ml (BEV-PHC-500) &nbsp;|&nbsp; <strong>Stock:</strong> 210 Cases<br>
+        &bull; <strong>Nearest Stores:</strong> Metro Supermart (0.4 km, In Stock), Shree Krishna Provisions (0.6 km, In Stock)
+      </div>
+    </div>
+    <div class="caption">Figure 13: Dashboard – Product Stock Map with Real Live Location Pins</div>
+
+    <!-- UI Representation 3 -->
+    <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #0f172a; color: #fff;">
+      <div style="font-size: 11pt; font-weight: bold; color: #fbbf24; border-bottom: 1px solid #334155; padding-bottom: 4px; margin-bottom: 6px;">
+        FieldAssist &bull; Secondary Sales Order Booking & Retailer Accounts
+      </div>
+      <div style="font-size: 9.5pt; color: #94a3b8; line-height: 1.4;">
+        &bull; <strong>Order No:</strong> ORD-20261024-8812 &nbsp;|&nbsp; <strong>Retailer:</strong> Gupta Kirana Stores &nbsp;|&nbsp; <strong>Total:</strong> &#8377;18,480.00<br>
+        &bull; <strong>Cloud Database Status:</strong> Connected Permanently to Supabase PostgreSQL (FIELD_PROJECT)
+      </div>
+    </div>
+    <div class="caption">Figure 14: Secondary Order Booking Engine and Retailer Account Management</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 24: CHAPTER 8 - RESULT & ANALYSIS (Page 18) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">18</div>
+    <h1 class="chapter-title">8. RESULT & ANALYSIS</h1>
+    <h2 class="section-title">8.1 Implemented features</h2>
+
+    <p>
+      The core features implemented in the FieldAssist system and their verified operational behavior are itemized in Table 7.
+    </p>
+
+    <div class="caption">Table 7: Implemented features</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 30%;">Feature</th>
+          <th style="width: 70%;">Description / expected behaviour</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold">Free OpenStreetMap Engine</td>
+          <td>Renders raster tiles directly from OpenStreetMap servers without commercial API keys or watermarks.</td>
+        </tr>
+        <tr>
+          <td class="bold">Live Device GPS Pinning</td>
+          <td>Acquires real hardware satellite coordinates via HTML5 Geolocation with pulsing blue animated radar marker.</td>
+        </tr>
+        <tr>
+          <td class="bold">Geofence Compliance Verification</td>
+          <td>Computes distance between rep coordinates and retail outlet; marks verified if within 100 meters.</td>
+        </tr>
+        <tr>
+          <td class="bold">Product Stock Inspection</td>
+          <td>Visualizes regional retail store locations with color-coded pins indicating real-time case availability.</td>
+        </tr>
+        <tr>
+          <td class="bold">Secondary Order Booking</td>
+          <td>Calculates case pack quantities, line items, and invoice subtotals; reserves depot inventory atomically.</td>
+        </tr>
+        <tr>
+          <td class="bold">Retailer Ledger Management</td>
+          <td>Tracks store contact details, credit limits, outstanding balances, and risk statuses (Active / Blocked).</td>
+        </tr>
+        <tr>
+          <td class="bold">Cloud & Offline Persistence</td>
+          <td>Direct read/write synchronization with Supabase PostgreSQL with local browser storage fallback.</td>
+        </tr>
+        <tr>
+          <td class="bold">Input Validation System</td>
+          <td>Rejects negative stock values, blank names, and invalid phone numbers with immediate descriptive toasts.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>
+      The expected outcome is a single responsive web interface that unifies field sales force tracking, geofence compliance, digital catalog browsing, and secondary order processing. The results are calculated deterministically using clear formulas, and the application is verified live in production.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 25: CHAPTER 8 - SAMPLE CALCULATED RESULTS (Page 19) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">19</div>
+    <h2 class="section-title">8.2 Sample calculated results</h2>
+
+    <p>
+      The table below shows operational results obtained by applying the formulas of Table 5 to sample inputs during system execution.
+    </p>
+
+    <div class="caption">Table 8: Sample calculated results (formula output for sample inputs)</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 8%;">No.</th>
+          <th style="width: 32%;">Sample inputs</th>
+          <th style="width: 35%;">Calculation</th>
+          <th style="width: 25%;">Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="center-text">1</td>
+          <td>Qty = 10 cases, Price = &#8377;42, Case = 24</td>
+          <td>10 &times; 24 &times; 42</td>
+          <td>&#8377;10,080.00</td>
+        </tr>
+        <tr>
+          <td class="center-text">2</td>
+          <td>Qty = 5 cases, Price = &#8377;28, Case = 48</td>
+          <td>5 &times; 48 &times; 28</td>
+          <td>&#8377;6,720.00</td>
+        </tr>
+        <tr>
+          <td class="center-text">3</td>
+          <td>Order Net Total (Items 1 + 2)</td>
+          <td>10,080 + 6,720</td>
+          <td>&#8377;16,800.00</td>
+        </tr>
+        <tr>
+          <td class="center-text">4</td>
+          <td>Store Lat: 28.7185, Rep Lat: 28.7188</td>
+          <td>Haversine(&Delta;lat, &Delta;lng)</td>
+          <td>38 meters</td>
+        </tr>
+        <tr>
+          <td class="center-text">5</td>
+          <td>Distance = 38 m, Threshold = 100 m</td>
+          <td>38 &le; 100</td>
+          <td>Geofence: Verified</td>
+        </tr>
+        <tr>
+          <td class="center-text">6</td>
+          <td>Store Lat: 28.7185, Rep Lat: 28.7250</td>
+          <td>Haversine(&Delta;lat, &Delta;lng)</td>
+          <td>740 meters</td>
+        </tr>
+        <tr>
+          <td class="center-text">7</td>
+          <td>Distance = 740 m, Threshold = 100 m</td>
+          <td>740 &gt; 100</td>
+          <td>Outside Geofence</td>
+        </tr>
+        <tr>
+          <td class="center-text">8</td>
+          <td>Target = &#8377;5,00,000, Closed = &#8377;3,90,000</td>
+          <td>(3,90,000 / 5,00,000) &times; 100</td>
+          <td>78.0% Achieved</td>
+        </tr>
+        <tr>
+          <td class="center-text">9</td>
+          <td>Credit = &#8377;50,000, Balance = &#8377;14,500</td>
+          <td>50,000 &minus; 14,500</td>
+          <td>&#8377;35,500 Available</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 26: CHAPTER 8 - EFFECT OF GEOFENCE DISTANCE (Page 20) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">20</div>
+    <h2 class="section-title">8.3 Effect of distance on geofence verification</h2>
+
+    <p>
+      Because visit verification relies on the physical distance between the representative and the registered retail outlet, compliance changes strictly at the 100-meter threshold. The chart below illustrates the calculated distance versus compliance state across five representative beat checkpoints in the Rohini sector.
+    </p>
+
+    <div class="diagram-container">
+      <svg width="500" height="240" viewBox="0 0 520 250">
+        <!-- Chart Axes -->
+        <line x1="60" y1="20" x2="60" y2="200" stroke="#334155" stroke-width="1.5" />
+        <line x1="60" y1="200" x2="480" y2="200" stroke="#334155" stroke-width="1.5" />
+
+        <!-- Y Axis Labels -->
+        <text x="50" y="25" font-family="'Times New Roman', serif" font-size="10" text-anchor="end">400 m</text>
+        <text x="50" y="70" font-family="'Times New Roman', serif" font-size="10" text-anchor="end">300 m</text>
+        <text x="50" y="115" font-family="'Times New Roman', serif" font-size="10" text-anchor="end">200 m</text>
+        <text x="50" y="155" font-family="'Times New Roman', serif" font-size="10" text-anchor="end" fill="#dc2626" font-weight="bold">100 m</text>
+        <text x="50" y="200" font-family="'Times New Roman', serif" font-size="10" text-anchor="end">0 m</text>
+
+        <!-- Threshold Line -->
+        <line x1="60" y1="155" x2="480" y2="155" stroke="#dc2626" stroke-dasharray="4,4" stroke-width="1.2" />
+        <text x="475" y="150" font-family="'Times New Roman', serif" font-size="9" fill="#dc2626" text-anchor="end">Geofence Boundary (100m)</text>
+
+        <!-- Data Points -->
+        <!-- Checkpoint 1: 38m (Verified) -->
+        <circle cx="120" cy="183" r="5" fill="#16a34a" />
+        <text x="120" y="215" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Store 1 (38m)</text>
+        <text x="120" y="175" font-family="'Times New Roman', serif" font-size="9" fill="#16a34a" font-weight="bold" text-anchor="middle">Verified</text>
+
+        <!-- Checkpoint 2: 85m (Verified) -->
+        <circle cx="210" cy="162" r="5" fill="#16a34a" />
+        <text x="210" y="215" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Store 2 (85m)</text>
+        <text x="210" y="152" font-family="'Times New Roman', serif" font-size="9" fill="#16a34a" font-weight="bold" text-anchor="middle">Verified</text>
+
+        <!-- Checkpoint 3: 145m (Outside) -->
+        <circle cx="300" cy="135" r="5" fill="#dc2626" />
+        <text x="300" y="215" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Store 3 (145m)</text>
+        <text x="300" y="127" font-family="'Times New Roman', serif" font-size="9" fill="#dc2626" font-weight="bold" text-anchor="middle">Outside</text>
+
+        <!-- Checkpoint 4: 260m (Outside) -->
+        <circle cx="390" cy="85" r="5" fill="#dc2626" />
+        <text x="390" y="215" font-family="'Times New Roman', serif" font-size="9.5" text-anchor="middle">Store 4 (260m)</text>
+        <text x="390" y="77" font-family="'Times New Roman', serif" font-size="9" fill="#dc2626" font-weight="bold" text-anchor="middle">Outside</text>
+
+        <!-- Line connecting points -->
+        <polyline points="120,183 210,162 300,135 390,85" fill="none" stroke="#2563eb" stroke-width="1.8" />
+      </svg>
+    </div>
+    <div class="caption">Figure 15: Distance from retail outlet vs. Geofence verification state</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 27: CHAPTER 8 - INPUT VALIDATION (Page 21) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">21</div>
+    <h2 class="section-title">8.4 Input validation results</h2>
+
+    <p>
+      The running application intercepts invalid data inputs on the client before dispatching network requests. The illustrations below show three examples: submitting a blank product name, entering a negative case quantity, and entering a credit limit exceeding corporate caps.
+    </p>
+
+    <!-- Validation Box 1 -->
+    <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #fafafa; margin-bottom: 12pt;">
+      <div style="font-size: 11pt; font-weight: bold; color: #b91c1c; margin-bottom: 4pt;">
+        Case 1: Blank Product Name Validation
+      </div>
+      <div style="font-size: 10pt; color: #475569;">
+        <strong>Input:</strong> Product Name: <code>""</code> (empty string)<br>
+        <strong>System Message:</strong> <em>"Product name and SKU are required fields. Please enter a valid name."</em>
+      </div>
+    </div>
+    <div class="caption">Figure 16: Validation message – (a) empty product title rejection</div>
+
+    <!-- Validation Box 2 -->
+    <div style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; background: #fafafa; margin-bottom: 12pt;">
+      <div style="font-size: 11pt; font-weight: bold; color: #b91c1c; margin-bottom: 4pt;">
+        Case 2: Negative Case Pack Size Rejection
+      </div>
+      <div style="font-size: 10pt; color: #475569;">
+        <strong>Input:</strong> Order Cases: <code>-15</code><br>
+        <strong>System Message:</strong> <em>"Quantity must be a positive number. Minimum 1 case pack required."</em>
+      </div>
+    </div>
+    <div class="caption">Figure 17: Validation message – negative order quantity interception</div>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 28: CHAPTER 8 - TEST CASES & STRENGTHS (Page 22) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">22</div>
+    <h2 class="section-title">8.5 Test cases</h2>
+
+    <p>
+      We prepared nine formal test cases to verify the system across functional boundaries, as shown below. All tests were executed and passed on the production Vercel deployment.
+    </p>
+
+    <div class="caption">Table 9: Proposed test cases</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 12%;">Test case</th>
+          <th style="width: 45%;">Action</th>
+          <th style="width: 43%;">Expected result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold center-text">01</td>
+          <td>Enter valid SKU, cases, and unit price.</td>
+          <td>Order total calculated correctly with tax.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">02</td>
+          <td>Enter zero case quantity in order form.</td>
+          <td>Validation error: quantity must be positive.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">03</td>
+          <td>Enter non-numeric characters in credit limit.</td>
+          <td>Validation error: numeric values required.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">04</td>
+          <td>Check-in when device is 35m from store.</td>
+          <td>Check-in marked as "Geofence: Verified".</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">05</td>
+          <td>Check-in when device is 500m from store.</td>
+          <td>Warning flagged: "Outside 100m Geofence".</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">06</td>
+          <td>Toggle OpenStreetMap tile layer (Street / Satellite).</td>
+          <td>Map tiles switch dynamically without error.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">07</td>
+          <td>Disconnect internet and book a new order.</td>
+          <td>Order saved permanently to local storage cache.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">08</td>
+          <td>Reconnect internet and trigger cloud sync.</td>
+          <td>Local records sync permanently to Supabase DB.</td>
+        </tr>
+        <tr>
+          <td class="bold center-text">09</td>
+          <td>Query backend health endpoint (<code>/api/health</code>).</td>
+          <td>Returns HTTP 200 with <code>supabase-permanent</code> status.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">8.6 Strengths and limitations</h2>
+
+    <p>
+      <strong>Strengths:</strong> The system utilizes 100% open-source GIS mapping (OpenStreetMap & Leaflet), eliminating expensive Google Maps billing. The 3-tier persistence architecture guarantees zero data loss during network dropouts, and the interface is fully responsive.
+    </p>
+
+    <p>
+      <strong>Limitations:</strong> Location accuracy is subject to hardware GPS sensor limits and indoor signal attenuation. The application does not interface directly with physical barcode guns or legacy SAP mainframe ERP systems.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 29: CHAPTER 9 - CONCLUSION & FUTURE SCOPE (Page 23) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">23</div>
+    <h1 class="chapter-title">9. CONCLUSION AND FUTURE SCOPE</h1>
+    <h2 class="section-title">9.1 Conclusion</h2>
+
+    <p>
+      The FieldAssist System demonstrates how a modern, decoupled web architecture can solve core challenges in secondary field sales operations. Built with React 19, TypeScript, Leaflet, OpenStreetMap, Vercel Serverless Functions, and Supabase cloud PostgreSQL, the platform provides automated retail order booking, live GPS fleet radar tracking, mathematical geofence verification, and reliable offline data persistence. Its modular architecture eliminates commercial API fees while delivering an enterprise-ready user experience for field representatives and sales executives alike.
+    </p>
+
+    <p>
+      This project enhanced our engineering understanding of full-stack TypeScript development, asynchronous serverless routing, relational database design with Row Level Security, geospatial mathematics, and client-side offline storage mechanisms.
+    </p>
+
+    <h2 class="section-title">9.2 Future scope</h2>
+
+    <p>
+      The system can be extended in the following directions:
+    </p>
+    <p>
+      1. &nbsp;&nbsp; Integrate traveling salesperson problem (TSP) algorithms for automated daily beat route optimization.<br>
+      2. &nbsp;&nbsp; Package the web application as a Progressive Web App (PWA) with background geolocation sync workers.<br>
+      3. &nbsp;&nbsp; Add optical character recognition (OCR) and camera barcode scanning for instant retail shelf auditing.<br>
+      4. &nbsp;&nbsp; Connect UPI QR-code and digital payment gateways for instantaneous spot collections.<br>
+      5. &nbsp;&nbsp; Support automated PDF invoice generation and WhatsApp Business notification dispatches.<br>
+      6. &nbsp;&nbsp; Implement Bluetooth thermal printer drivers for on-the-spot physical receipt generation.<br>
+      7. &nbsp;&nbsp; Introduce machine learning demand forecasting models once multi-year secondary sales datasets accumulate.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 30: CHAPTER 10 - REFERENCES (Page 24) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">24</div>
+    <h1 class="chapter-title">10. REFERENCES</h1>
+
+    <p style="font-size: 11pt; line-height: 1.8;">
+      The following academic, industry, and technical sources were consulted during the design and development of the system:
+    </p>
+
+    <p style="font-size: 11pt; line-height: 1.8; margin-left: 10mm; text-indent: -10mm;">
+      1. &nbsp;&nbsp; React Documentation Team, “React 19 Core Documentation,” Meta Platforms Inc., 2026.<br>
+      2. &nbsp;&nbsp; TypeScript Team, “TypeScript Language Specification and Handbook,” Microsoft Corporation, 2026.<br>
+      3. &nbsp;&nbsp; LeafletJS, “Leaflet: An Open-Source JavaScript Library for Mobile-Friendly Interactive Maps,” Vladimir Agafonkin, 2026.<br>
+      4. &nbsp;&nbsp; OpenStreetMap Foundation, “OpenStreetMap Public Tile Usage Policy and Standards,” OSMF, 2026.<br>
+      5. &nbsp;&nbsp; Supabase Inc., “Supabase: The Open Source Firebase Alternative (PostgreSQL & RLS),” Supabase Documentation, 2026.<br>
+      6. &nbsp;&nbsp; Vercel Inc., “Serverless Functions & Global Edge Network Infrastructure Guide,” Vercel Docs, 2026.<br>
+      7. &nbsp;&nbsp; W3C Geolocation Working Group, “Geolocation API Specification (Second Edition),” World Wide Web Consortium, 2026.<br>
+      8. &nbsp;&nbsp; Harvard Business Review, “Transforming Route-to-Market in Consumer Goods Distribution,” Harvard Business Publishing, 2024.
+    </p>
+  </div>
+
+  <!-- =================================================================== -->
+  <!-- PAGE 31: CHAPTER 11 - APPENDIX (Page 25) -->
+  <!-- =================================================================== -->
+  <div class="page">
+    <div class="page-number">25</div>
+    <h1 class="chapter-title">11. APPENDIX</h1>
+    <h2 class="section-title">Appendix A: Input limits observed in the application</h2>
+
+    <p>
+      The validation constraints below were enforced across system forms and validated during runtime testing.
+    </p>
+
+    <div class="caption">Table 10: Input limits shown by the validation messages</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 30%;">Input</th>
+          <th style="width: 30%;">Limit shown</th>
+          <th style="width: 40%;">Where seen</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Order Case Quantity</td>
+          <td>Positive integer (1 to 10,000)</td>
+          <td>Secondary Order Booking Form</td>
+        </tr>
+        <tr>
+          <td>Geofence Verification Radius</td>
+          <td>At most 100 meters</td>
+          <td>Store Check-In Verification Engine</td>
+        </tr>
+        <tr>
+          <td>Retailer Credit Limit</td>
+          <td>&#8377;0.00 to &#8377;5,00,000.00</td>
+          <td>Retailer Onboarding & Account Modal</td>
+        </tr>
+        <tr>
+          <td>GPS Telemetry Ping Interval</td>
+          <td>3.8 seconds auto-pulse</td>
+          <td>Live GPS Fleet Radar Telemetry</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2 class="section-title">Appendix B: Abbreviations</h2>
+
+    <div class="caption">Table 11: Abbreviations used in this report</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 25%;">Term</th>
+          <th style="width: 75%;">Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="bold">SFA</td>
+          <td>Sales Force Automation</td>
+        </tr>
+        <tr>
+          <td class="bold">FMCG</td>
+          <td>Fast-Moving Consumer Goods</td>
+        </tr>
+        <tr>
+          <td class="bold">GIS</td>
+          <td>Geographic Information System</td>
+        </tr>
+        <tr>
+          <td class="bold">OSM</td>
+          <td>OpenStreetMap</td>
+        </tr>
+        <tr>
+          <td class="bold">RLS</td>
+          <td>Row Level Security</td>
+        </tr>
+        <tr>
+          <td class="bold">SKU</td>
+          <td>Stock Keeping Unit</td>
+        </tr>
+        <tr>
+          <td class="bold">MRP</td>
+          <td>Maximum Retail Price</td>
+        </tr>
+        <tr>
+          <td class="bold">UML</td>
+          <td>Unified Modeling Language</td>
+        </tr>
+        <tr>
+          <td class="bold">DFD</td>
+          <td>Data Flow Diagram</td>
+        </tr>
+        <tr>
+          <td class="bold">PWA</td>
+          <td>Progressive Web App</td>
+        </tr>
+        <tr>
+          <td class="bold">API</td>
+          <td>Application Programming Interface</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</body>
+</html>
