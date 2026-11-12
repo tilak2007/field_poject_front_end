@@ -231,11 +231,11 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
             <!-- Radar pulsing waves -->
             <div style="position: absolute; top: -6px; left: -6px; width: 44px; height: 44px; border-radius: 50%; background: ${statusColor}33; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
             
-            <!-- Avatar Circle -->
+            <!-- Monogram Initials Avatar Badge -->
             <div style="position: relative; width: 32px; height: 32px; border-radius: 50%; border: 3px solid ${
               isSelected ? '#fbbf24' : 'white'
-            }; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden; background: #1e293b;">
-              <img src="${rep.avatar}" style="width: 100%; height: 100%; object-fit: cover;" alt="${rep.name}" />
+            }; box-shadow: 0 4px 12px rgba(0,0,0,0.3); overflow: hidden; background: linear-gradient(135deg, #4f46e5, #06b6d4); display: flex; align-items: center; justify-content: center; color: #ffffff; font-weight: 800; font-size: 11px;">
+              ${(rep.name.split(' ').map((p) => p[0]).slice(0, 2).join('') || 'SR').toUpperCase()}
             </div>
 
             <!-- Status Dot -->
@@ -286,17 +286,24 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
       }
     });
 
-    // Auto-center on selected rep if enabled
-    if (autoFollow && selectedRepId && markersRef.current[selectedRepId]) {
-      const selectedRep = reps.find((r) => r.id === selectedRepId);
-      if (selectedRep) {
-        map.panTo([selectedRep.coords.lat, selectedRep.coords.lng], {
+    // Auto-center on selected rep or real user device if enabled
+    if (autoFollow && selectedRepId) {
+      if (selectedRepId === 'rep-my-device' && myDeviceCoords) {
+        map.panTo([myDeviceCoords.lat, myDeviceCoords.lng], {
           animate: true,
           duration: 0.8,
         });
+      } else if (markersRef.current[selectedRepId]) {
+        const selectedRep = reps.find((r) => r.id === selectedRepId);
+        if (selectedRep) {
+          map.panTo([selectedRep.coords.lat, selectedRep.coords.lng], {
+            animate: true,
+            duration: 0.8,
+          });
+        }
       }
     }
-  }, [reps, selectedRepId, showTrails, autoFollow, onSelectRep]);
+  }, [reps, selectedRepId, showTrails, autoFollow, onSelectRep, myDeviceCoords]);
 
   // 5. Render Real Live Device GPS Coordinates with Pulsing Radar
   useEffect(() => {
@@ -417,6 +424,8 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     const map = mapInstanceRef.current;
     if (!map) return;
     map.invalidateSize();
+    onSelectRep('rep-my-device');
+    setAutoFollow(true);
     if (myDeviceCoords) {
       map.flyTo([myDeviceCoords.lat, myDeviceCoords.lng], 16, {
         duration: 1.0,

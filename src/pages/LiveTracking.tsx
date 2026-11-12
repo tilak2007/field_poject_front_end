@@ -26,7 +26,7 @@ export const LiveTracking: React.FC = () => {
   const { user } = useAuth();
 
   const [fleetData, setFleetData] = useState<FleetGpsResponse | null>(null);
-  const [selectedRepId, setSelectedRepId] = useState<string | null>('rep-1');
+  const [selectedRepId, setSelectedRepId] = useState<string | null>('rep-my-device');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Moving' | 'At Store' | 'Idle'>('All');
   const [isSimulating, setIsSimulating] = useState(true);
@@ -37,7 +37,18 @@ export const LiveTracking: React.FC = () => {
   // Real Device GPS state
   const [isBroadcastingDevice, setIsBroadcastingDevice] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
-  const [myCoords, setMyCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(null);
+  const [myCoords, setMyCoords] = useState<{ lat: number; lng: number; accuracy?: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('fieldassist_user_coords');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+          return { lat: parsed.lat, lng: parsed.lng, accuracy: parsed.accuracy || 20 };
+        }
+      }
+    } catch {}
+    return null;
+  });
   const [broadcastFeedback, setBroadcastFeedback] = useState<string | null>(null);
   const watchIdRef = useRef<number | null>(null);
 
@@ -75,6 +86,10 @@ export const LiveTracking: React.FC = () => {
   useEffect(() => {
     acquireLiveLocation((loc: GeoLocationResult) => {
       setMyCoords({ lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy });
+      setSelectedRepId('rep-my-device');
+      setBroadcastFeedback(
+        `📍 Real Live GPS Locked: ${loc.lat}, ${loc.lng} (${loc.city || '±' + loc.accuracy + 'm accuracy'})`
+      );
     });
   }, []);
 
@@ -281,6 +296,46 @@ export const LiveTracking: React.FC = () => {
           >
             Geofences: {showGeofences ? 'ON' : 'OFF'}
           </button>
+
+          {/* Quick Region / City Selector for Live Testing */}
+          <div className="relative">
+            <select
+              aria-label="Select Region / City for Live Map"
+              defaultValue=""
+              onChange={(e) => {
+                const val = e.target.value;
+                if (!val) return;
+                if (val === 'gps') {
+                  handleLocateMe();
+                } else {
+                  const [latStr, lngStr, name] = val.split(':');
+                  const lat = parseFloat(latStr);
+                  const lng = parseFloat(lngStr);
+                  if (!isNaN(lat) && !isNaN(lng)) {
+                    const coords = { lat, lng, accuracy: 25 };
+                    setMyCoords(coords);
+                    setSelectedRepId('rep-my-device');
+                    setBroadcastFeedback(`📍 Live Location pinned to ${name} (${lat}, ${lng})`);
+                    try {
+                      localStorage.setItem('fieldassist_user_coords', JSON.stringify({ ...coords, city: name }));
+                    } catch {}
+                  }
+                }
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 focus:outline-none focus:border-brand-500 cursor-pointer"
+            >
+              <option value="" disabled>Select Target City / Location</option>
+              <option value="gps">📡 Auto-Detect My Live Device GPS</option>
+              <option value="12.9716:77.5946:Bengaluru">Bengaluru (Karnataka)</option>
+              <option value="28.6139:77.2090:Delhi-NCR">Delhi-NCR (Central)</option>
+              <option value="19.0760:72.8777:Mumbai">Mumbai (Maharashtra)</option>
+              <option value="17.3850:78.4867:Hyderabad">Hyderabad (Telangana)</option>
+              <option value="13.0827:80.2707:Chennai">Chennai (Tamil Nadu)</option>
+              <option value="22.5726:88.3639:Kolkata">Kolkata (West Bengal)</option>
+              <option value="18.5204:73.8567:Pune">Pune (Maharashtra)</option>
+              <option value="23.0225:72.5714:Ahmedabad">Ahmedabad (Gujarat)</option>
+            </select>
+          </div>
 
           {/* Real Device High Accuracy Locate Button */}
           <button
