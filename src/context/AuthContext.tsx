@@ -31,7 +31,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const cached = localStorage.getItem('fieldassist_user_profile');
       if (cached) {
-        return JSON.parse(cached) as User;
+        const parsed = JSON.parse(cached) as User;
+        if (parsed.avatar && (parsed.avatar.includes('unsplash') || parsed.avatar.includes('ui-avatars') || parsed.avatar.includes('images.'))) {
+          parsed.avatar = '';
+          localStorage.setItem('fieldassist_user_profile', JSON.stringify(parsed));
+        }
+        return parsed;
       }
     } catch {
       // Ignore
