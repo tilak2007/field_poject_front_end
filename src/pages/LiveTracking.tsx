@@ -17,6 +17,7 @@ import {
   Crosshair,
 } from 'lucide-react';
 import { LiveGpsMap } from '../components/maps/LiveGpsMap';
+import { UserAvatar } from '../components/common/UserAvatar';
 import { gpsApi, type FleetGpsResponse } from '../api/gpsApi';
 import { useAuth } from '../context/AuthContext';
 import { acquireLiveLocation, type GeoLocationResult } from '../utils/geolocation';
@@ -207,8 +208,7 @@ export const LiveTracking: React.FC = () => {
         name: `${user?.name || 'You'} (Your Real Live GPS)`,
         code: 'LIVE-GPS-USER',
         territory: user?.territory || 'Real-Time Device Telemetry',
-        avatar:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        avatar: '',
         phone: user?.email || '+91 99999 88888',
         batteryLevel: 98,
         speedKmH: 0,
@@ -433,10 +433,10 @@ export const LiveTracking: React.FC = () => {
           {currentDisplayRep && (
             <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <img
-                  src={currentDisplayRep.avatar}
-                  alt={currentDisplayRep.name}
-                  className="w-11 h-11 rounded-2xl object-cover border-2 border-brand-500 shadow-md"
+                <UserAvatar
+                  name={currentDisplayRep.name}
+                  role="Sales Representative"
+                  size="md"
                 />
                 <div>
                   <div className="flex items-center gap-2">
@@ -602,10 +602,10 @@ export const LiveTracking: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
                         <div className="relative">
-                          <img
-                            src={rep.avatar}
-                            alt={rep.name}
-                            className="w-9 h-9 rounded-xl object-cover border border-slate-700"
+                          <UserAvatar
+                            name={rep.name}
+                            role="Sales Representative"
+                            size="sm"
                           />
                           <span
                             className={`absolute -bottom-1 -right-1 w-3 h-3 rounded-full border-2 border-slate-950 ${

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { UserAvatar } from '../common/UserAvatar';
 import {
   Menu,
   Search,
@@ -242,10 +243,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             }}
             className="flex items-center gap-2.5 p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 hover:border-slate-700 transition-all min-h-[44px]"
           >
-            <img
-              src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'}
-              alt={user?.name || 'User Profile'}
-              className="w-8 h-8 rounded-lg object-cover ring-2 ring-brand-500/30"
+            <UserAvatar
+              name={user?.name}
+              email={user?.email}
+              role={user?.role}
+              size="sm"
             />
             <div className="hidden sm:block text-left min-w-0">
               <div className="text-xs font-semibold text-slate-100 truncate max-w-[120px]">
@@ -262,10 +264,11 @@ export const Navbar: React.FC<NavbarProps> = ({
           {showProfileMenu && (
             <div className="absolute right-0 mt-3 w-72 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl z-50 p-4 space-y-3">
               <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
-                <img
-                  src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'}
-                  alt={user?.name}
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-brand-500/50"
+                <UserAvatar
+                  name={user?.name}
+                  email={user?.email}
+                  role={user?.role}
+                  size="md"
                 />
                 <div className="min-w-0 flex-1">
                   <h4 className="text-xs font-bold text-white truncate">{user?.name}</h4>

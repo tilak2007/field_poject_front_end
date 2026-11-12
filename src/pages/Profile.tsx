@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { UserAvatar } from '../components/common/UserAvatar';
 import {
   ShieldCheck,
   KeyRound,
@@ -110,12 +111,13 @@ export const Profile: React.FC = () => {
         <div className="space-y-6">
           <div className="p-6 rounded-3xl bg-slate-900/60 border border-slate-800/80 space-y-5 text-center">
             <div className="relative inline-block mx-auto">
-              <img
-                src={user?.avatar}
-                alt={user?.name}
-                className="w-24 h-24 rounded-3xl object-cover ring-4 ring-brand-500/30 mx-auto shadow-xl"
+              <UserAvatar
+                name={user?.name}
+                email={user?.email}
+                role={user?.role}
+                size="xl"
               />
-              <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-slate-900" />
+              <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-emerald-500 ring-4 ring-slate-900" />
             </div>
 
             <div>

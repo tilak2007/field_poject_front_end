@@ -64,7 +64,7 @@ export const repsApi = {
           id: r.id,
           name: r.name,
           code: r.code,
-          avatar: r.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          avatar: r.avatar || '',
           phone: r.phone || '',
           email: r.email || '',
           territory: r.territory || 'North Delhi',

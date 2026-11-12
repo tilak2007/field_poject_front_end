@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api';
 import type { User, UserRole, AccountStatus } from '../types/auth';
+import { UserAvatar } from '../components/common/UserAvatar';
 import {
   Users,
   UserPlus,
@@ -371,10 +372,11 @@ export const UserManagement: React.FC = () => {
                       {/* User Info */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <img
-                            src={u.avatar}
-                            alt={u.name}
-                            className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-700 shrink-0"
+                          <UserAvatar
+                            name={u.name}
+                            email={u.email}
+                            role={u.role}
+                            size="md"
                           />
                           <div className="min-w-0">
                             <div className="font-bold text-white flex items-center gap-1.5 truncate">

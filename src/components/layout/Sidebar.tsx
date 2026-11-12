@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { UserAvatar } from '../common/UserAvatar';
 import {
   LayoutDashboard,
   Users,
@@ -273,10 +274,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 title="Go to Profile"
               >
                 <div className="relative shrink-0">
-                  <img
-                    src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'}
-                    alt={user?.name || 'User'}
-                    className="w-9 h-9 rounded-full object-cover border border-brand-500/40"
+                  <UserAvatar
+                    name={user?.name}
+                    email={user?.email}
+                    role={user?.role}
+                    size="md"
                   />
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-slate-900" />
                 </div>

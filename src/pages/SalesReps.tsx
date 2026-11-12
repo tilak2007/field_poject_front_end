@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { mockSalesReps, mockVisits, mockOrders } from '../data/mockData';
 import { repsApi } from '../api/repsApi';
+import { UserAvatar } from '../components/common/UserAvatar';
 import type { SalesRep } from '../types';
 
 export const SalesReps: React.FC = () => {
@@ -91,7 +92,7 @@ export const SalesReps: React.FC = () => {
       email: newRepEmail.trim() || `${newRepName.toLowerCase().replace(/\s+/g, '.')}@fieldassist.io`,
       territory: newRepTerritory,
       region,
-      avatar: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`,
+      avatar: '',
       status: 'Active',
       batteryLevel: 100,
       lastCheckIn: 'Just now',
@@ -239,10 +240,11 @@ export const SalesReps: React.FC = () => {
                   {/* Name & Avatar */}
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={rep.avatar}
-                        alt={rep.name}
-                        className="w-9 h-9 rounded-full object-cover border border-slate-700 shadow-sm"
+                      <UserAvatar
+                        name={rep.name}
+                        email={rep.email}
+                        role="Sales Representative"
+                        size="md"
                       />
                       <div>
                         <span className="font-bold text-white text-sm block">{rep.name}</span>
@@ -346,10 +348,11 @@ export const SalesReps: React.FC = () => {
             {/* Profile Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
               <div className="flex items-center gap-4">
-                <img
-                  src={selectedRep.avatar}
-                  alt={selectedRep.name}
-                  className="w-16 h-16 rounded-2xl object-cover border-2 border-brand-500 shadow-lg"
+                <UserAvatar
+                  name={selectedRep.name}
+                  email={selectedRep.email}
+                  role="Sales Representative"
+                  size="lg"
                 />
                 <div>
                   <div className="flex items-center gap-2">

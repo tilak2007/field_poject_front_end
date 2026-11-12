@@ -35,7 +35,7 @@ export const adminUsersApi = {
           role: p.role,
           status: p.status || 'Active',
           mustChangePassword: p.must_change_password ?? false,
-          avatar: p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(p.full_name)}&background=0284c7&color=fff`,
+          avatar: p.avatar_url || '',
           territory: p.territory || 'North Delhi',
           region: p.region || 'North Zone (Delhi-NCR)',
           department: p.department || 'Field Sales Force',
@@ -108,7 +108,7 @@ export const adminUsersApi = {
       role,
       status: 'Active',
       mustChangePassword: true,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=0284c7&color=fff`,
+      avatar: '',
       territory,
       region: 'North Zone (Delhi-NCR)',
       department:
