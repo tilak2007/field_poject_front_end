@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Sparkles,
   LogOut,
+  KeyRound,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 
@@ -101,6 +102,23 @@ const navCategories: NavCategory[] = [
       },
     ],
   },
+  {
+    title: 'Administration & Security',
+    items: [
+      {
+        name: 'User Management',
+        path: '/admin/users',
+        icon: ShieldCheck,
+        badge: 'ADMIN',
+        allowedRoles: ['System Admin'],
+      },
+      {
+        name: 'Profile & Security',
+        path: '/profile',
+        icon: KeyRound,
+      },
+    ],
+  },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
@@ -146,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     PRO
                   </span>
                 </div>
-                <p className="text-[11px] text-slate-400 font-medium">Field Force SaaS</p>
+                <p className="text-[11px] text-slate-400 font-medium">Enterprise FMCG</p>
               </div>
             </div>
 
@@ -215,6 +233,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                       'text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors flex items-center gap-1',
                                       item.badge === 'LIVE'
                                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
+                                        : item.badge === 'ADMIN'
+                                        ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
                                         : isActive
                                         ? 'bg-white/20 text-white'
                                         : 'bg-slate-800 text-slate-400 group-hover:bg-brand-500/20 group-hover:text-brand-300'
@@ -247,8 +267,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           {/* User Profile Card / Active Role Status */}
           <div className="p-4 border-t border-slate-800/80 bg-slate-950/50">
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/80 border border-slate-800/80">
-              <div className="flex items-center gap-3">
-                <div className="relative">
+              <div
+                className="flex items-center gap-3 cursor-pointer min-w-0"
+                onClick={() => navigate('/profile')}
+                title="Go to Profile"
+              >
+                <div className="relative shrink-0">
                   <img
                     src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'}
                     alt={user?.name || 'User'}

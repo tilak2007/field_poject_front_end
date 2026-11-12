@@ -1,4 +1,4 @@
-import type { User, AuthResponse, LoginCredentials, SignUpData, UserRole } from '../types/auth';
+import type { User, AuthResponse, LoginCredentials, ChangePasswordData } from '../types/auth';
 import { supabase } from '../lib/supabase';
 import { setAuthToken, removeAuthToken, simulateNetworkDelay, apiFetch } from './client';
 
@@ -9,12 +9,15 @@ export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }
       name: 'Vinayaka Tilak',
       email: 'vinaymeghu09@gmail.com',
       role: 'System Admin',
+      status: 'Active',
+      mustChangePassword: false,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       territory: 'National HQ',
       region: 'All India Zones',
       phone: '+91 98110 00001',
       department: 'Executive Administration',
       permissions: ['all', 'read:all', 'write:all', 'delete:all', 'admin:system', 'manage:targets', 'manage:reps'],
+      createdAt: '2026-01-15T09:00:00Z',
     },
     password: 'vinay123',
   },
@@ -24,12 +27,15 @@ export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }
       name: 'Tilak P.S.',
       email: 'tilak2007@gmail.com',
       role: 'Sales Manager',
+      status: 'Active',
+      mustChangePassword: false,
       avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80',
       territory: 'North Delhi',
       region: 'North Zone (Delhi-NCR)',
       phone: '+91 98110 00002',
       department: 'Regional Sales Management',
       permissions: ['read:all', 'write:orders', 'write:retailers', 'manage:targets', 'manage:reps', 'view:analytics'],
+      createdAt: '2026-02-10T10:00:00Z',
     },
     password: 'tilak123',
   },
@@ -39,12 +45,15 @@ export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }
       name: 'Rajesh Sharma',
       email: 'admin@fieldassist.io',
       role: 'System Admin',
+      status: 'Active',
+      mustChangePassword: false,
       avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
       territory: 'National HQ',
       region: 'All India Zones',
       phone: '+91 98110 00100',
       department: 'Executive Management',
       permissions: ['all', 'read:all', 'write:all', 'delete:all', 'admin:system', 'manage:targets', 'manage:reps'],
+      createdAt: '2026-01-15T09:00:00Z',
     },
     password: 'admin123',
   },
@@ -54,12 +63,15 @@ export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }
       name: 'Priya Sundaram',
       email: 'manager@fieldassist.io',
       role: 'Sales Manager',
+      status: 'Active',
+      mustChangePassword: false,
       avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
       territory: 'North Delhi',
       region: 'North Zone (Delhi-NCR)',
       phone: '+91 98110 00200',
       department: 'Regional Sales Management',
       permissions: ['read:all', 'write:orders', 'write:retailers', 'manage:targets', 'manage:reps', 'view:analytics'],
+      createdAt: '2026-02-01T10:00:00Z',
     },
     password: 'manager123',
   },
@@ -70,19 +82,45 @@ export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }
       name: 'Vikram Sharma',
       email: 'vikram@fieldassist.io',
       role: 'Sales Representative',
+      status: 'Active',
+      mustChangePassword: false,
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       territory: 'North Delhi',
       region: 'North Zone (Delhi-NCR)',
       phone: '+91 98220 11223',
       department: 'Field Sales Force',
       permissions: ['read:own', 'write:visits', 'write:orders', 'punch:attendance'],
+      createdAt: '2026-03-01T11:00:00Z',
     },
     password: 'rep123',
   },
 };
 
+// Password complexity validator
+export function checkPasswordStrength(password: string): { isValid: boolean; message?: string } {
+  if (!password || password.length < 8) {
+    return { isValid: false, message: 'Password must be at least 8 characters long.' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { isValid: false, message: 'Password must contain at least one uppercase letter (A-Z).' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { isValid: false, message: 'Password must contain at least one lowercase letter (a-z).' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { isValid: false, message: 'Password must contain at least one number (0-9).' };
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return { isValid: false, message: 'Password must contain at least one special character (!@#$%^&*).' };
+  }
+  if (password === 'role@123') {
+    return { isValid: false, message: 'Cannot reuse temporary initial password "role@123".' };
+  }
+  return { isValid: true };
+}
+
 // Retrieve permanent accounts database from persistent local storage
-function getAccountsRegistry(): Record<string, { user: User; password: string }> {
+export function getAccountsRegistry(): Record<string, { user: User; password: string }> {
   try {
     const stored = localStorage.getItem('fieldassist_accounts_registry');
     if (stored) {
@@ -96,7 +134,7 @@ function getAccountsRegistry(): Record<string, { user: User; password: string }>
 }
 
 // Save account into permanent registry
-function saveAccountToRegistry(email: string, user: User, password: string): void {
+export function saveAccountToRegistry(email: string, user: User, password: string): void {
   try {
     const current = getAccountsRegistry();
     current[email.toLowerCase().trim()] = { user, password };
@@ -108,14 +146,14 @@ function saveAccountToRegistry(email: string, user: User, password: string): voi
 
 export const authApi = {
   /**
-   * Authenticate permanent credentials against registry and Serverless backend
+   * Authenticate credentials against Serverless backend and Supabase Auth
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const email = credentials.email.toLowerCase().trim();
     const password = credentials.password || '';
 
     if (!email || !password) {
-      throw { message: 'Please enter both your email and password.', status: 400 };
+      throw { message: 'Please enter both your Gmail address and password.', status: 400 };
     }
 
     // 1. Try Serverless Backend (/api/auth)
@@ -125,6 +163,12 @@ export const authApi = {
         body: JSON.stringify({ action: 'login', email, password }),
       });
       if (res && res.success && res.user && res.token) {
+        if (res.user.status === 'Deactivated') {
+          throw {
+            message: 'Your account has been deactivated by the System Administrator. Please contact your administrator for assistance.',
+            status: 403,
+          };
+        }
         setAuthToken(res.token);
         localStorage.setItem('fieldassist_user_profile', JSON.stringify(res.user));
         localStorage.setItem('fieldassist_auth_token', res.token);
@@ -132,9 +176,8 @@ export const authApi = {
         return { user: res.user, token: res.token, expiresIn: res.expiresIn || 604800 };
       }
     } catch (err: any) {
-      // If server returned 401 or invalid password, honor the message
-      if (err?.status === 401) {
-        throw { message: err.message || 'Invalid password. Please enter the correct password for this account.', status: 401 };
+      if (err?.status === 403 || err?.status === 401) {
+        throw err;
       }
       console.warn('Backend /api/auth notice, trying fallback auth:', err);
     }
@@ -149,7 +192,6 @@ export const authApi = {
       if (!error && data.session && data.user) {
         const supaUser = data.user;
         const token = data.session.access_token;
-        setAuthToken(token);
 
         let profile: any = null;
         try {
@@ -163,28 +205,43 @@ export const authApi = {
           // Ignore
         }
 
-        const role: UserRole =
-          (profile?.role as UserRole) || supaUser.user_metadata?.role || (email.includes('admin') ? 'System Admin' : 'Sales Manager');
+        if (profile?.status === 'Deactivated') {
+          await supabase.auth.signOut();
+          throw {
+            message: 'Your account has been deactivated by the System Administrator. Please contact your administrator for assistance.',
+            status: 403,
+          };
+        }
+
+        const role = profile?.role || supaUser.user_metadata?.role || (email.includes('admin') ? 'System Admin' : 'Sales Representative');
+        const mustChangePassword =
+          profile?.must_change_password !== undefined
+            ? profile.must_change_password
+            : password === 'role@123';
 
         const userObj: User = {
           id: supaUser.id,
           name: profile?.full_name || supaUser.user_metadata?.full_name || email.split('@')[0],
           email: supaUser.email || email,
           role,
-          avatar: profile?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+          status: profile?.status || 'Active',
+          mustChangePassword,
+          avatar: profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(supaUser.email || 'User')}&background=0284c7&color=fff`,
           territory: profile?.territory || 'North Delhi',
           region: profile?.region || 'North Zone (Delhi-NCR)',
-          department: profile?.department || 'Field Force Operations',
-          permissions: role === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
+          department: profile?.department || (role === 'System Admin' ? 'Executive Administration' : role === 'Sales Manager' ? 'Regional Sales Management' : 'Field Sales Force'),
+          permissions: role === 'System Admin' ? ['all'] : role === 'Sales Manager' ? ['read:all', 'write:orders', 'write:retailers'] : ['read:own', 'write:visits', 'write:orders'],
+          createdAt: profile?.created_at || new Date().toISOString(),
         };
 
+        setAuthToken(token);
         localStorage.setItem('fieldassist_user_profile', JSON.stringify(userObj));
         localStorage.setItem('fieldassist_auth_token', token);
         saveAccountToRegistry(email, userObj, password);
         return { user: userObj, token, expiresIn: data.session.expires_in };
       }
-    } catch {
-      // Continue to local permanent registry check
+    } catch (supaErr: any) {
+      if (supaErr?.status === 403) throw supaErr;
     }
 
     // 3. Validate against permanent accounts registry
@@ -194,8 +251,15 @@ export const authApi = {
 
     if (!account) {
       throw {
-        message: `No account registered with ${email}. Please check your email or click "Sign up" to create a permanent account.`,
+        message: `No account registered with ${email}. Accounts must be created by a System Administrator.`,
         status: 404,
+      };
+    }
+
+    if (account.user.status === 'Deactivated') {
+      throw {
+        message: 'Your account has been deactivated by the System Administrator. Please contact your administrator for assistance.',
+        status: 403,
       };
     }
 
@@ -216,93 +280,104 @@ export const authApi = {
   },
 
   /**
-   * Register a new permanent user account
+   * Mandatory First Login or Self-Service Password Change
    */
-  async signUp(data: SignUpData): Promise<AuthResponse> {
-    const email = data.email.toLowerCase().trim();
-    const password = data.password;
+  async changePassword(data: ChangePasswordData): Promise<User> {
+    const { currentPassword, newPassword, confirmPassword } = data;
 
-    if (!email || !password || !data.fullName) {
-      throw { message: 'Please fill in your name, work email, and password.', status: 400 };
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      throw { message: 'All password fields are required.', status: 400 };
     }
 
-    if (password.length < 6) {
-      throw { message: 'Password must be at least 6 characters long.', status: 400 };
+    if (newPassword !== confirmPassword) {
+      throw { message: 'New password and confirmation do not match.', status: 400 };
     }
 
-    // 1. Try Serverless Backend (/api/auth)
+    const strength = checkPasswordStrength(newPassword);
+    if (!strength.isValid) {
+      throw { message: strength.message || 'Password does not meet complexity requirements.', status: 400 };
+    }
+
+    const currentUser = await this.getCurrentUser();
+    if (!currentUser) {
+      throw { message: 'You must be logged in to change your password.', status: 401 };
+    }
+
+    const email = currentUser.email.toLowerCase().trim();
+
+    // 1. Try Serverless Backend
     try {
-      const res = await apiFetch<{ success: boolean; user: User; token: string; expiresIn: number }>('/auth', {
+      const res = await apiFetch<{ success: boolean; user?: User; message?: string }>('/auth', {
         method: 'POST',
         body: JSON.stringify({
-          action: 'register',
+          action: 'change_password',
           email,
-          password,
-          fullName: data.fullName,
-          role: data.role,
-          territory: data.territory,
+          currentPassword,
+          newPassword,
+          confirmPassword,
         }),
       });
-      if (res && res.success && res.user && res.token) {
-        setAuthToken(res.token);
-        localStorage.setItem('fieldassist_user_profile', JSON.stringify(res.user));
-        localStorage.setItem('fieldassist_auth_token', res.token);
-        saveAccountToRegistry(email, res.user, password);
-        return { user: res.user, token: res.token, expiresIn: res.expiresIn || 604800 };
+
+      if (res && res.success) {
+        const updatedUser: User = {
+          ...currentUser,
+          mustChangePassword: false,
+        };
+        localStorage.setItem('fieldassist_user_profile', JSON.stringify(updatedUser));
+        saveAccountToRegistry(email, updatedUser, newPassword);
+        return updatedUser;
       }
-    } catch (err) {
-      console.warn('Backend /api/auth register notice, falling back:', err);
+    } catch (backendErr: any) {
+      if (backendErr?.status === 400 || backendErr?.status === 401) {
+        throw backendErr;
+      }
+      console.warn('Backend password change notice:', backendErr);
     }
 
-    // Check if account already exists in registry
+    // 2. Try Supabase Auth password update
+    try {
+      const { error: supaErr } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (!supaErr) {
+        try {
+          await supabase
+            .from('user_profiles')
+            .update({ must_change_password: false })
+            .eq('id', currentUser.id);
+        } catch {}
+      }
+    } catch {}
+
+    // 3. Update local accounts registry
     const registry = getAccountsRegistry();
-    if (registry[email]) {
-      throw {
-        message: `An account with ${email} is already registered. Please log in with your password.`,
-        status: 409,
-      };
+    const account = registry[email];
+    if (account) {
+      if (account.password !== currentPassword && currentPassword !== 'role@123') {
+        throw { message: 'Current password is incorrect.', status: 401 };
+      }
     }
 
-    // Create user object
-    const newUser: User = {
-      id: `usr-perm-${Date.now()}`,
-      name: data.fullName.trim(),
-      email,
-      role: data.role,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.fullName)}&background=0284c7&color=fff`,
-      territory: data.territory || 'North Delhi',
-      region: 'North Zone (Delhi-NCR)',
-      department: data.role === 'Sales Representative' ? 'Field Sales Force' : 'Field Sales Operations',
-      permissions: data.role === 'System Admin' ? ['all'] : ['read:all', 'write:orders'],
+    const updatedUser: User = {
+      ...currentUser,
+      mustChangePassword: false,
     };
 
-    // Attempt Supabase sign up in background if online
-    try {
-      await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: data.fullName,
-            role: data.role,
-            territory: data.territory || 'North Delhi',
-          },
-        },
-      });
-    } catch {
-      // Continue with permanent local registration
-    }
+    saveAccountToRegistry(email, updatedUser, newPassword);
+    localStorage.setItem('fieldassist_user_profile', JSON.stringify(updatedUser));
 
-    // Save into permanent registry
-    saveAccountToRegistry(email, newUser, password);
+    return updatedUser;
+  },
 
-    // Save permanent active session
-    const token = `fieldassist_perm_token_${newUser.id}_${Date.now()}`;
-    setAuthToken(token);
-    localStorage.setItem('fieldassist_user_profile', JSON.stringify(newUser));
-    localStorage.setItem('fieldassist_auth_token', token);
-
-    return { user: newUser, token, expiresIn: 31536000 };
+  /**
+   * Public Sign-up is disabled. Throws error.
+   */
+  async signUp(_data: any): Promise<AuthResponse> {
+    throw {
+      message: 'Public self-registration is disabled. Only authorized administrators can create new user accounts in FieldAssist.',
+      status: 403,
+    };
   },
 
   /**

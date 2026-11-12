@@ -5,6 +5,9 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { LandingPage } from './pages/LandingPage';
 import { Login } from './pages/Login';
+import { ChangePassword } from './pages/ChangePassword';
+import { UserManagement } from './pages/UserManagement';
+import { Profile } from './pages/Profile';
 import { Dashboard } from './pages/Dashboard';
 import { SalesReps } from './pages/SalesReps';
 import { Retailers } from './pages/Retailers';
@@ -26,11 +29,21 @@ export const App: React.FC = () => {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Home Page (TypingClub style Hero & Moon Landing) */}
+          {/* Public Home Page */}
           <Route path="/" element={<LandingPage />} />
 
-          {/* Public Login Page (Edclub style centered auth card) */}
+          {/* Public Login Page (Public self-registration removed) */}
           <Route path="/login" element={<Login />} />
+
+          {/* Mandatory First-Time or Self-Service Password Change */}
+          <Route
+            path="/change-password"
+            element={
+              <ProtectedRoute>
+                <ChangePassword />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected Application Portal */}
           <Route
@@ -42,6 +55,20 @@ export const App: React.FC = () => {
           >
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin/dashboard" element={<Dashboard />} />
+            
+            {/* Admin-Controlled User Management (Strictly System Admin) */}
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute allowedRoles={['System Admin']}>
+                  <UserManagement />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* User Profile & Password Management (Available to all authenticated roles) */}
+            <Route path="/profile" element={<Profile />} />
+
             <Route
               path="/live-tracking"
               element={

@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import type { UserRole } from '../../types/auth';
-import { ShieldAlert, ArrowLeft, RefreshCw } from 'lucide-react';
+import { ShieldAlert, ArrowLeft, LogOut, Lock } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,11 +23,47 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
     );
   }
 
-  if (!isAuthenticated) {
+  // 1. Unauthenticated users cannot access protected pages
+  if (!isAuthenticated || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // Check role authorization if specified
+  // 2. Deactivated accounts are immediately blocked from application functionality
+  if (user.status === 'Deactivated') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full p-6 sm:p-8 rounded-3xl bg-slate-900 border border-rose-500/30 text-center space-y-5 shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center mx-auto">
+            <Lock className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold text-white">Account Deactivated</h3>
+            <p className="text-xs text-slate-400">
+              Your account has been deactivated by the System Administrator. Access to FieldAssist is disabled.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              await logout();
+              navigate('/login');
+            }}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px]"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Return to Login</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Mandatory First Login Password Change Enforcement
+  // If mustChangePassword is true, block access to all pages except /change-password
+  if (user.mustChangePassword && location.pathname !== '/change-password') {
+    return <Navigate to="/change-password" replace />;
+  }
+
+  // 4. Role-based authorization check
   if (allowedRoles && allowedRoles.length > 0 && !hasRole(allowedRoles)) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-4">
@@ -39,7 +75,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
           <div className="space-y-1.5">
             <h3 className="text-lg font-bold text-white">Authorization Restricted</h3>
             <p className="text-xs text-slate-400">
-              Your account role (<span className="text-amber-400 font-semibold">{user?.role}</span>) does not have sufficient permission to view this page.
+              Your assigned role (<span className="text-amber-400 font-semibold">{user.role}</span>) does not have sufficient permissions to view this resource.
             </p>
           </div>
 
@@ -56,21 +92,27 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowe
 
           <div className="flex items-center gap-3 pt-2">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => {
+                if (user.role === 'Sales Representative') {
+                  navigate('/rep/attendance');
+                } else {
+                  navigate('/dashboard');
+                }
+              }}
               className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px]"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Dashboard</span>
+              <span>My Dashboard</span>
             </button>
             <button
               onClick={async () => {
                 await logout();
                 navigate('/login');
               }}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px]"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-xs font-semibold flex items-center justify-center gap-2 min-h-[44px]"
             >
-              <RefreshCw className="w-4 h-4" />
-              <span>Switch Role</span>
+              <LogOut className="w-4 h-4" />
+              <span>Sign Out</span>
             </button>
           </div>
         </div>

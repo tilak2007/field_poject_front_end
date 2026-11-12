@@ -347,6 +347,38 @@ export const Dashboard: React.FC = () => {
         </div>
       )}
 
+      {/* System Admin User Management Control Center Card (Displayed for System Admin) */}
+      {user?.role === 'System Admin' && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-950/40 via-slate-900 to-indigo-950/40 border border-purple-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-400 shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-bold text-white text-sm">
+                  Admin User Management & Role Authorization
+                </h4>
+                <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-bold text-[10px] border border-purple-500/30">
+                  Admin Control Center
+                </span>
+              </div>
+              <p className="text-slate-300 text-xs mt-0.5">
+                Create new user accounts with Gmail addresses, assign 3 core roles, manage activation status, and reset credentials.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/admin/users"
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shrink-0 flex items-center gap-2 transition-all shadow-md shadow-purple-600/30 self-start sm:self-auto cursor-pointer"
+          >
+            <Users className="w-4 h-4" />
+            <span>User Management</span>
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-brand-900 via-slate-900 to-indigo-950 p-6 lg:p-8 border border-brand-500/20 shadow-2xl">
         <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />

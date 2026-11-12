@@ -1,4 +1,5 @@
 import { authApi } from './authApi';
+import { adminUsersApi } from './adminUsersApi';
 import { repsApi } from './repsApi';
 import { retailersApi } from './retailersApi';
 import { ordersApi } from './ordersApi';
@@ -12,6 +13,7 @@ import * as backendFoundation from '../integrations/supabase';
 
 export * from './client';
 export * from './authApi';
+export * from './adminUsersApi';
 export * from './repsApi';
 export * from './retailersApi';
 export * from './ordersApi';
@@ -24,6 +26,7 @@ export * from '../integrations/supabase';
 
 export const api = {
   auth: authApi,
+  adminUsers: adminUsersApi,
   reps: repsApi,
   retailers: retailersApi,
   orders: ordersApi,
@@ -41,4 +44,3 @@ export const api = {
 };
 
 export default api;
-

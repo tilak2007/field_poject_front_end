@@ -12,10 +12,11 @@ import {
   FileText,
   X,
   LogOut,
-  Shield,
   Server,
   ChevronDown,
   Database,
+  KeyRound,
+  Users,
 } from 'lucide-react';
 import { CloudConnectionModal } from './CloudConnectionModal';
 
@@ -300,20 +301,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </p>
               </div>
 
-              <div className="pt-2 border-t border-slate-800 flex items-center gap-2">
+              <div className="pt-2 border-t border-slate-800 space-y-1.5">
+                {user?.role === 'System Admin' && (
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      navigate('/admin/users');
+                    }}
+                    className="w-full py-2 px-3 text-left text-xs font-semibold text-purple-300 hover:text-white bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 rounded-xl transition-colors flex items-center gap-2 min-h-[36px]"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>User Management</span>
+                  </button>
+                )}
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
-                    navigate('/login');
+                    navigate('/profile');
                   }}
-                  className="flex-1 py-2 text-center text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center gap-1.5 min-h-[40px]"
+                  className="w-full py-2 px-3 text-left text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition-colors flex items-center gap-2 min-h-[36px]"
                 >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Switch Account</span>
+                  <KeyRound className="w-3.5 h-3.5 text-brand-400" />
+                  <span>Profile & Change Password</span>
                 </button>
                 <button
                   onClick={handleLogout}
-                  className="flex-1 py-2 text-center text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition-colors flex items-center justify-center gap-1.5 min-h-[40px]"
+                  className="w-full py-2 px-3 text-left text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl transition-colors flex items-center gap-2 min-h-[36px]"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
