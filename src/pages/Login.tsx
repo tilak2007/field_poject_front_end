@@ -191,8 +191,74 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
+          {/* Quick Credential Testing Guide Drawer */}
+          <div className="pt-2">
+            <details className="group rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-700 transition-all">
+              <summary className="flex cursor-pointer items-center justify-between font-semibold text-slate-700 select-none">
+                <span className="flex items-center gap-1.5 text-[11px]">
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#eb5e28]" />
+                  <span>Enterprise Pre-configured Credentials</span>
+                </span>
+                <span className="text-[10px] text-slate-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="mt-2.5 space-y-2 border-t border-slate-200/80 pt-2 text-[11px]">
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-slate-200">
+                  <div>
+                    <span className="font-bold text-purple-700">👑 System Admin:</span>
+                    <span className="font-mono text-slate-600 ml-1">admin@fieldassist.io</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin@fieldassist.io');
+                      setPassword('admin123');
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold border border-purple-200 cursor-pointer"
+                  >
+                    Fill
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-slate-200">
+                  <div>
+                    <span className="font-bold text-blue-700">💼 Sales Manager:</span>
+                    <span className="font-mono text-slate-600 ml-1">manager@fieldassist.io</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('manager@fieldassist.io');
+                      setPassword('manager123');
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 cursor-pointer"
+                  >
+                    Fill
+                  </button>
+                </div>
+                <div className="flex items-center justify-between p-1.5 rounded-lg bg-white border border-slate-200">
+                  <div>
+                    <span className="font-bold text-emerald-700">🏃 Sales Rep:</span>
+                    <span className="font-mono text-slate-600 ml-1">vikram@fieldassist.io</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('vikram@fieldassist.io');
+                      setPassword('rep123');
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 cursor-pointer"
+                  >
+                    Fill
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 italic pt-0.5">
+                  Admin-created accounts receive initial password <code className="font-mono font-bold text-slate-700">role@123</code> and are forced to change it on first login.
+                </p>
+              </div>
+            </details>
+          </div>
+
           {/* Security Notice Footer */}
-          <div className="pt-3 border-t border-slate-100 text-center">
+          <div className="pt-2 border-t border-slate-100 text-center">
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Self-registration is disabled. If you do not have an account or need access, please contact your <strong className="text-slate-700">System Administrator</strong>.
             </p>
