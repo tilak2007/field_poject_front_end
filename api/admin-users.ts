@@ -1,8 +1,6 @@
 // FieldAssist Serverless Backend: Admin User Management API
 // Secure endpoint restricted to System Administrators for creating & managing users.
 import { createClient } from '@supabase/supabase-js';
-import { SYSTEM_ACCOUNTS } from './auth.ts';
-
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ibzycpftqmngcrmgpsed.supabase.co';
 const SUPABASE_ANON_KEY =
   process.env.SUPABASE_ANON_KEY ||
@@ -14,6 +12,65 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY || SUPABAS
 });
 
 const ALLOWED_ROLES = ['System Admin', 'Sales Manager', 'Sales Representative'] as const;
+
+const SYSTEM_ACCOUNTS: Record<string, any> = {
+  'vinaymeghu09@gmail.com': {
+    id: 'usr-vinay-01',
+    name: 'Vinayaka Tilak',
+    email: 'vinaymeghu09@gmail.com',
+    role: 'System Admin',
+    status: 'Active',
+    mustChangePassword: false,
+    avatar: '',
+    territory: 'National HQ',
+    region: 'All India Zones',
+    department: 'Executive Administration',
+    permissions: ['all', 'read:all', 'write:all', 'delete:all', 'admin:system', 'manage:targets', 'manage:reps'],
+    createdAt: '2026-01-15T09:00:00Z',
+  },
+  'admin@fieldassist.io': {
+    id: 'usr-admin-01',
+    name: 'Rajesh Sharma',
+    email: 'admin@fieldassist.io',
+    role: 'System Admin',
+    status: 'Active',
+    mustChangePassword: false,
+    avatar: '',
+    territory: 'National HQ',
+    region: 'All India Zones',
+    department: 'Executive Management',
+    permissions: ['all', 'read:all', 'write:all', 'delete:all', 'admin:system', 'manage:targets', 'manage:reps'],
+    createdAt: '2026-01-15T09:00:00Z',
+  },
+  'manager@fieldassist.io': {
+    id: 'usr-mgr-01',
+    name: 'Priya Sundaram',
+    email: 'manager@fieldassist.io',
+    role: 'Sales Manager',
+    status: 'Active',
+    mustChangePassword: false,
+    avatar: '',
+    territory: 'North Delhi',
+    region: 'North Zone (Delhi-NCR)',
+    department: 'Regional Sales Management',
+    permissions: ['read:all', 'write:orders', 'write:retailers', 'manage:targets', 'manage:reps', 'view:analytics'],
+    createdAt: '2026-02-01T09:00:00Z',
+  },
+  'vikram@fieldassist.io': {
+    id: 'usr-rep-01',
+    name: 'Vikram Sharma',
+    email: 'vikram@fieldassist.io',
+    role: 'Sales Representative',
+    status: 'Active',
+    mustChangePassword: false,
+    avatar: '',
+    territory: 'North Delhi',
+    region: 'North Zone (Delhi-NCR)',
+    department: 'Field Sales Force',
+    permissions: ['read:own', 'write:visits', 'write:orders'],
+    createdAt: '2026-02-15T09:00:00Z',
+  },
+};
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Content-Type', 'application/json');
