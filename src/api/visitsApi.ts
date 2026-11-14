@@ -97,9 +97,9 @@ export const visitsApi = {
     return [
       {
         id: 'beat-01',
-        beatName: 'Connaught Place & Janpath Kirana Route',
-        code: 'BEAT-DEL-01',
-        territory: 'North Delhi',
+        beatName: 'Jayanagar & JP Nagar Retail Loop',
+        code: 'BEAT-BLR-01',
+        territory: 'Bengaluru South',
         repId: 'rep-01',
         repName: 'Vikram Sharma',
         retailersCount: 18,
@@ -111,9 +111,9 @@ export const visitsApi = {
       },
       {
         id: 'beat-02',
-        beatName: 'Karol Bagh & Patel Nagar Supermarkets',
-        code: 'BEAT-DEL-02',
-        territory: 'West Delhi',
+        beatName: 'BTM Layout & Koramangala Supermarkets',
+        code: 'BEAT-BLR-02',
+        territory: 'Bengaluru Central',
         repId: 'rep-02',
         repName: 'Ananya Verma',
         retailersCount: 22,

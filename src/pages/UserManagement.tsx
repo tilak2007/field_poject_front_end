@@ -37,7 +37,7 @@ export const UserManagement: React.FC = () => {
   const [newFullName, setNewFullName] = useState<string>('');
   const [newEmail, setNewEmail] = useState<string>('');
   const [newRole, setNewRole] = useState<UserRole>('Sales Representative');
-  const [newTerritory, setNewTerritory] = useState<string>('North Delhi');
+  const [newTerritory, setNewTerritory] = useState<string>('Bengaluru South');
   const [isCreating, setIsCreating] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -101,7 +101,7 @@ export const UserManagement: React.FC = () => {
       setNewFullName('');
       setNewEmail('');
       setNewRole('Sales Representative');
-      setNewTerritory('North Delhi');
+      setNewTerritory('Bengaluru South');
 
       showToast(`User ${created.name} created successfully with temporary password "role@123"!`);
       loadUsers();
@@ -613,13 +613,11 @@ export const UserManagement: React.FC = () => {
                   onChange={(e) => setNewTerritory(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-brand-500"
                 >
-                  <option value="National HQ">National HQ</option>
-                  <option value="North Delhi">North Delhi</option>
-                  <option value="West Delhi">West Delhi</option>
-                  <option value="South Delhi">South Delhi</option>
-                  <option value="South Mumbai">South Mumbai</option>
+                  <option value="Bengaluru South">Bengaluru South</option>
                   <option value="Bengaluru Central">Bengaluru Central</option>
-                  <option value="Kolkata East">Kolkata East</option>
+                  <option value="Bengaluru East">Bengaluru East</option>
+                  <option value="Bengaluru West">Bengaluru West</option>
+                  <option value="National HQ">National HQ</option>
                 </select>
               </div>
 

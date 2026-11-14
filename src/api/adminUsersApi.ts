@@ -36,8 +36,8 @@ export const adminUsersApi = {
           status: p.status || 'Active',
           mustChangePassword: p.must_change_password ?? false,
           avatar: p.avatar_url || '',
-          territory: p.territory || 'North Delhi',
-          region: p.region || 'North Zone (Delhi-NCR)',
+          territory: p.territory || 'Bengaluru South',
+          region: p.region || 'South Zone (Bengaluru)',
           department: p.department || 'Field Sales Force',
           permissions: p.role === 'System Admin' ? ['all'] : p.role === 'Sales Manager' ? ['read:all', 'write:orders', 'write:retailers'] : ['read:own', 'write:visits', 'write:orders'],
           createdAt: p.created_at,
@@ -60,7 +60,7 @@ export const adminUsersApi = {
     const email = data.email.toLowerCase().trim();
     const fullName = data.fullName.trim();
     const role = data.role;
-    const territory = data.territory || 'North Delhi';
+    const territory = data.territory || 'Bengaluru South';
 
     if (!email || !fullName) {
       throw { message: 'Full name and Gmail address are required.', status: 400 };
@@ -110,7 +110,7 @@ export const adminUsersApi = {
       mustChangePassword: true,
       avatar: '',
       territory,
-      region: 'North Zone (Delhi-NCR)',
+      region: 'South Zone (Bengaluru)',
       department:
         role === 'System Admin'
           ? 'Executive Administration'

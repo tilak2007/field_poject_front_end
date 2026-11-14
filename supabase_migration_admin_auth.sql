@@ -146,8 +146,8 @@ CREATE OR REPLACE FUNCTION public.admin_create_user(
   _email TEXT,
   _full_name TEXT,
   _role TEXT,
-  _territory TEXT DEFAULT 'North Delhi',
-  _region TEXT DEFAULT 'North Zone (Delhi-NCR)',
+  _territory TEXT DEFAULT 'Bengaluru South',
+  _region TEXT DEFAULT 'South Zone (Bengaluru)',
   _department TEXT DEFAULT NULL
 )
 RETURNS JSONB

@@ -54,9 +54,9 @@ export const Visits: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Form state
-  const [selectedRetailerName, setSelectedRetailerName] = useState('Sharma Kirana Store');
+  const [selectedRetailerName, setSelectedRetailerName] = useState('Sri Manjunatha Provision Store');
   const [customRetailerName, setCustomRetailerName] = useState('');
-  const [retailerAddress, setRetailerAddress] = useState('Shop 12, Main Market, Sector 7, Rohini, Delhi');
+  const [retailerAddress, setRetailerAddress] = useState('4th Block, Jayanagar, Bengaluru');
   const [repName, setRepName] = useState('Vikram Sharma');
   const [visitType, setVisitType] = useState<'Regular Order' | 'Audit' | 'Collection' | 'New Lead Pitch'>('Audit');
   const [plannedTime, setPlannedTime] = useState('Today, 02:30 PM');
@@ -100,7 +100,7 @@ export const Visits: React.FC = () => {
       visitCode: nextCode,
       retailerId: `ret-sp-${Date.now()}`,
       retailerName: finalRetailer,
-      retailerAddress: retailerAddress || 'National Capital Territory, Delhi',
+      retailerAddress: retailerAddress || 'Bengaluru',
       repId: `rep-${Date.now()}`,
       repName,
       beatName: 'Special Priority Route',
@@ -460,11 +460,10 @@ export const Visits: React.FC = () => {
                       onChange={(e) => setRepName(e.target.value)}
                       className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                     >
-                      <option value="Vikram Sharma">Vikram Sharma (North Delhi)</option>
-                      <option value="Ananya Verma">Ananya Verma (South Mumbai)</option>
-                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru)</option>
-                      <option value="Priya Patel">Priya Patel (Ahmedabad)</option>
-                      <option value="Amit Singh">Amit Singh (West Delhi)</option>
+                      <option value="Vikram Sharma">Vikram Sharma (Bengaluru South)</option>
+                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru Central)</option>
+                      <option value="Ananya Verma">Ananya Verma (Bengaluru East)</option>
+                      <option value="Amit Singh">Amit Singh (Bengaluru West)</option>
                     </select>
                   </div>
 

@@ -82,49 +82,49 @@ export const Dashboard: React.FC = () => {
     { month: 'Oct', actualSales: 422500, target: 500000 },
   ];
 
-  // Beat Outlets in the Sales Rep's Allocated Area (North Delhi Beat A)
+  // Beat Outlets in the Sales Rep's Allocated Area (Bengaluru South Beat A)
   const repBeatOutlets = [
     {
       id: 'out-1',
-      name: 'Gupta Kirana Store',
-      area: 'Civil Lines, North Delhi',
-      contact: 'Ramesh Gupta (+91 98112-44510)',
+      name: 'Sri Manjunatha Provision Store',
+      area: '4th Block, Jayanagar, Bengaluru',
+      contact: 'Manjunath Gowda (+91 98112-44510)',
       status: 'Completed',
       orderAmount: 4500,
       checkInTime: '09:45 AM',
     },
     {
       id: 'out-2',
-      name: 'Aggarwal Supermart',
-      area: 'Kamla Nagar, North Delhi',
-      contact: 'Suresh Aggarwal (+91 98711-22340)',
+      name: 'Shree Lakshmi Supermart',
+      area: '7th Phase, JP Nagar, Bengaluru',
+      contact: 'Lakshmi Narayana (+91 98711-22340)',
       status: 'Completed',
       orderAmount: 3500,
       checkInTime: '11:15 AM',
     },
     {
       id: 'out-3',
-      name: 'Sharma General Store',
-      area: 'Model Town, North Delhi',
-      contact: 'Vikas Sharma (+91 99100-33211)',
+      name: 'Venkateshwara Traders',
+      area: 'BTM Layout 2nd Stage, Bengaluru',
+      contact: 'R. Venkatesh (+91 99100-33211)',
       status: 'In Progress',
       orderAmount: 0,
       checkInTime: '01:20 PM',
     },
     {
       id: 'out-4',
-      name: 'New Delhi Provision Store',
-      area: 'Hudson Lane, North Delhi',
-      contact: 'Amit Saxena (+91 98188-77441)',
+      name: 'Ganesh Grand Bazaar',
+      area: '5th Block, Koramangala, Bengaluru',
+      contact: 'Ganesh Hegde (+91 98188-77441)',
       status: 'Scheduled',
       orderAmount: 0,
       checkInTime: '03:00 PM',
     },
     {
       id: 'out-5',
-      name: 'Verma Grocers',
-      area: 'Roop Nagar, North Delhi',
-      contact: 'Sunil Verma (+91 98991-55223)',
+      name: 'Balaji Daily Needs',
+      area: '2nd Stage, Banashankari, Bengaluru',
+      contact: 'Balaji Prasad (+91 98991-55223)',
       status: 'Scheduled',
       orderAmount: 0,
       checkInTime: '04:30 PM',
@@ -223,7 +223,7 @@ export const Dashboard: React.FC = () => {
       const csvRows = [
         ['FieldAssist FMCG - Sales Representative Performance Summary'],
         ['Representative Name', user?.name || 'Vikram Sharma'],
-        ['Allocated Area / Beat', user?.territory || 'North Delhi Beat A'],
+        ['Allocated Area / Beat', user?.territory || 'Bengaluru South Beat A'],
         ['Role', 'Sales Representative'],
         ['Report Generated', new Date().toLocaleString()],
         [],
@@ -237,7 +237,7 @@ export const Dashboard: React.FC = () => {
         ['Today Orders Count', visibleOrders.length.toString()],
         ['Today Field Visits Completed', '4 / 6 Outlets'],
         [],
-        ['Allocated Beat Route Stores (North Delhi Beat A)'],
+        ['Allocated Beat Route Stores (Bengaluru South Beat A)'],
         ['Store Name', 'Location', 'Check-In Status', 'Order Booked (INR)'],
         ...repBeatOutlets.map((b) => [b.name, `"${b.area}"`, b.status, b.orderAmount]),
         [],
@@ -398,7 +398,7 @@ export const Dashboard: React.FC = () => {
             <p className="text-slate-300 text-sm mt-1 max-w-xl">
               {isRep ? (
                 <span>
-                  Allocated Beat Area: <strong className="text-white">{user?.territory || 'North Delhi Beat A'}</strong> • Tracking personal target achievement, beat route store visits, and secondary orders.
+                  Allocated Beat Area: <strong className="text-white">{user?.territory || 'Bengaluru South Beat A'}</strong> • Tracking personal target achievement, beat route store visits, and secondary orders.
                 </span>
               ) : (
                 'Live performance monitoring for sales reps, territory targets, retailer coverage, and secondary order booking.'
@@ -480,15 +480,15 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="text-lg font-black text-white truncate" title={user?.territory || 'North Delhi Beat A'}>
-                {user?.territory || 'North Delhi Beat A'}
+              <div className="text-lg font-black text-white truncate" title={user?.territory || 'Bengaluru South Beat A'}>
+                {user?.territory || 'Bengaluru South Beat A'}
               </div>
               <div className="flex items-center gap-1.5 mt-1 text-indigo-400 text-xs font-semibold">
                 <Building2 className="w-3.5 h-3.5" />
                 <span>18 Retail Outlets in Beat</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-2">
-                Assigned Territory • North Zone
+                Assigned Territory • South Zone (Bengaluru)
               </div>
             </div>
           </div>
@@ -536,7 +536,7 @@ export const Dashboard: React.FC = () => {
                 <span>2 Stores Remaining</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-2">
-                Next: New Delhi Provision
+                Next: Ganesh Grand Bazaar
               </div>
             </div>
           </div>
@@ -749,7 +749,7 @@ export const Dashboard: React.FC = () => {
                   <span>My Allocated Area Beat Outlets</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Assigned Route: {user?.territory || 'North Delhi Beat A'}
+                  Assigned Route: {user?.territory || 'Bengaluru South Beat A'}
                 </p>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 text-[11px] font-semibold border border-emerald-500/20">
@@ -963,7 +963,7 @@ export const Dashboard: React.FC = () => {
               </h2>
               <p className="text-xs text-slate-400">
                 {isRep
-                  ? `Orders booked by you in ${user?.territory || 'North Delhi Beat A'}`
+                  ? `Orders booked by you in ${user?.territory || 'Bengaluru South Beat A'}`
                   : 'Latest field orders booked by sales reps'}
               </p>
             </div>
@@ -1029,7 +1029,7 @@ export const Dashboard: React.FC = () => {
             </h2>
             <p className="text-xs text-slate-400">
               {isRep
-                ? `Geofence verified check-ins and appointments for ${user?.territory || 'North Delhi Beat A'}`
+                ? `Geofence verified check-ins and appointments for ${user?.territory || 'Bengaluru South Beat A'}`
                 : 'Geofence verified check-ins and outlet appointments'}
             </p>
           </div>

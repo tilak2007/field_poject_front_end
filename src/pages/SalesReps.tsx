@@ -48,7 +48,7 @@ export const SalesReps: React.FC = () => {
   const [newRepName, setNewRepName] = useState('');
   const [newRepPhone, setNewRepPhone] = useState('');
   const [newRepEmail, setNewRepEmail] = useState('');
-  const [newRepTerritory, setNewRepTerritory] = useState('North Delhi');
+  const [newRepTerritory, setNewRepTerritory] = useState('Bengaluru South');
   const [newRepTarget, setNewRepTarget] = useState<number>(1500000);
 
   // Fetch real sales representatives from backend database
@@ -75,14 +75,7 @@ export const SalesReps: React.FC = () => {
     e.preventDefault();
     const nextCodeNum = 100 + repsList.length + 1;
     const nextCode = `SR-${nextCodeNum}`;
-    const region =
-      newRepTerritory.includes('Delhi')
-        ? 'North Zone (Delhi-NCR)'
-        : newRepTerritory.includes('Mumbai')
-        ? 'West Zone (Mumbai)'
-        : newRepTerritory.includes('Bengaluru')
-        ? 'South Zone (BLR)'
-        : 'Central Zone';
+    const region = 'South Zone (Bengaluru)';
 
     const newRep: SalesRep = {
       id: `rep-${Date.now()}`,
@@ -675,13 +668,11 @@ export const SalesReps: React.FC = () => {
                     onChange={(e) => setNewRepTerritory(e.target.value)}
                     className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="North Delhi">North Delhi</option>
-                    <option value="South Mumbai">South Mumbai</option>
-                    <option value="Bengaluru Central">Bengaluru Central</option>
-                    <option value="Chennai Metro">Chennai Metro</option>
-                    <option value="Ahmedabad East">Ahmedabad East</option>
-                    <option value="Kolkata Hub">Kolkata Hub</option>
-                    <option value="Hyderabad West">Hyderabad West</option>
+                    <option value="Bengaluru South">Bengaluru South (Jayanagar / JP Nagar)</option>
+                    <option value="Bengaluru Central">Bengaluru Central (BTM / Koramangala)</option>
+                    <option value="Bengaluru East">Bengaluru East (Indiranagar / Whitefield)</option>
+                    <option value="Bengaluru West">Bengaluru West (Banashankari / Rajajinagar)</option>
+                    <option value="Bengaluru North">Bengaluru North (Hebbal / Yelahanka)</option>
                   </select>
                 </div>
 

@@ -307,7 +307,7 @@ export const Attendance: React.FC = () => {
                 Daily Shift Verification
               </span>
               <h2 className="text-lg font-bold text-white mt-0.5">
-                {user?.name || 'Sales Representative'} • {user?.territory || 'North Delhi'}
+                {user?.name || 'Sales Representative'} • {user?.territory || 'Bengaluru South'}
               </h2>
             </div>
 
@@ -510,7 +510,7 @@ export const Attendance: React.FC = () => {
               {isRep ? 'My Attendance Records' : 'Territory Attendance Records'}
             </h3>
             <span className="text-[11px] text-slate-500">
-              {isRep ? `Confidential shift logs for ${user?.territory || 'North Delhi Beat A'}` : 'Live Field Force Logs'}
+              {isRep ? `Confidential shift logs for ${user?.territory || 'Bengaluru South Beat A'}` : 'Live Field Force Logs'}
             </span>
           </div>
 
@@ -574,7 +574,7 @@ export const Attendance: React.FC = () => {
                       : '— Active Shift'}
                   </td>
                   <td className="py-4 px-4 text-slate-300">
-                    {coords.latitude}, {coords.longitude} ({user?.territory || 'North Delhi'})
+                    {coords.latitude}, {coords.longitude} ({user?.territory || 'Bengaluru South'})
                   </td>
                   <td className="py-4 px-4 font-bold text-brand-400">
                     {todayAttendance?.working_hours || (isCheckedOut ? 8.5 : 'Active')} hrs

@@ -61,8 +61,8 @@ export const Retailers: React.FC = () => {
   const [outletPhone, setOutletPhone] = useState('');
   const [outletType, setOutletType] = useState<Retailer['type']>('Kirana');
   const [address, setAddress] = useState('');
-  const [territory, setTerritory] = useState('North Delhi');
-  const [city, setCity] = useState('Delhi');
+  const [territory, setTerritory] = useState('Bengaluru South');
+  const [city, setCity] = useState('Bengaluru');
   const [creditLimit, setCreditLimit] = useState(50000);
   const [assignedRepName, setAssignedRepName] = useState('Vikram Sharma');
   const [initialStatus, setInitialStatus] = useState<'Active' | 'Lead'>('Active');
@@ -142,7 +142,7 @@ export const Retailers: React.FC = () => {
     e.preventDefault();
     if (!outletName.trim()) return;
 
-    const newCode = `RET-DEL-${String(retailersList.length + 101).padStart(3, '0')}`;
+    const newCode = `RET-BLR-${String(retailersList.length + 101).padStart(3, '0')}`;
     const newRetailer: Retailer = {
       id: `ret-${Date.now()}`,
       name: outletName.trim(),
@@ -150,7 +150,7 @@ export const Retailers: React.FC = () => {
       code: newCode,
       type: outletType,
       phone: outletPhone.trim() || '+91 98110 00000',
-      address: address.trim() || 'Main Market, Delhi',
+      address: address.trim() || '4th Block, Jayanagar, Bengaluru',
       territory,
       city,
       outstandingBalance: 0,
@@ -884,12 +884,11 @@ export const Retailers: React.FC = () => {
                       onChange={(e) => setTerritory(e.target.value)}
                       className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                     >
-                      <option value="North Delhi">North Delhi</option>
-                      <option value="West Delhi">West Delhi</option>
-                      <option value="South Delhi">South Delhi</option>
-                      <option value="East Delhi">East Delhi</option>
-                      <option value="South Mumbai">South Mumbai</option>
+                      <option value="Bengaluru South">Bengaluru South</option>
                       <option value="Bengaluru Central">Bengaluru Central</option>
+                      <option value="Bengaluru East">Bengaluru East</option>
+                      <option value="Bengaluru West">Bengaluru West</option>
+                      <option value="Bengaluru North">Bengaluru North</option>
                     </select>
                   </div>
 
@@ -927,11 +926,11 @@ export const Retailers: React.FC = () => {
                       onChange={(e) => setAssignedRepName(e.target.value)}
                       className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                     >
-                      <option value="Vikram Sharma">Vikram Sharma (North Delhi)</option>
-                      <option value="Ananya Verma">Ananya Verma (South Mumbai)</option>
-                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru)</option>
-                      <option value="Priya Patel">Priya Patel (Ahmedabad)</option>
-                      <option value="Amit Singh">Amit Singh (West Delhi)</option>
+                      <option value="Vikram Sharma">Vikram Sharma (Bengaluru South)</option>
+                      <option value="Ananya Verma">Ananya Verma (Bengaluru Central)</option>
+                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru East)</option>
+                      <option value="Priya Patel">Priya Patel (Bengaluru West)</option>
+                      <option value="Amit Singh">Amit Singh (Bengaluru North)</option>
                     </select>
                   </div>
 
@@ -941,7 +940,7 @@ export const Retailers: React.FC = () => {
                       type="text"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
-                      placeholder="Delhi"
+                      placeholder="Bengaluru"
                       className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
                     />
                   </div>

@@ -95,8 +95,8 @@ export default async function handler(req: any, res: any) {
               status: p.status || 'Active',
               mustChangePassword: p.must_change_password ?? false,
               avatar: p.avatar_url || '',
-              territory: p.territory || 'North Delhi',
-              region: p.region || 'North Zone (Delhi-NCR)',
+              territory: p.territory || 'Bengaluru South',
+              region: p.region || 'South Zone (Bengaluru)',
               department: p.department || 'Field Sales Force',
               permissions: p.role === 'System Admin' ? ['all'] : p.role === 'Sales Manager' ? ['read:all', 'write:orders', 'write:retailers'] : ['read:own', 'write:visits', 'write:orders'],
               createdAt: p.created_at,
@@ -123,7 +123,7 @@ export default async function handler(req: any, res: any) {
 
   // POST: Create a new user account
   if (req.method === 'POST') {
-    const { email, fullName, role, territory = 'North Delhi' } = req.body || {};
+    const { email, fullName, role, territory = 'Bengaluru South' } = req.body || {};
     const normEmail = String(email || '').toLowerCase().trim();
 
     if (!normEmail || !fullName) {
@@ -177,7 +177,7 @@ export default async function handler(req: any, res: any) {
       mustChangePassword: true,
       avatar: '',
       territory,
-      region: 'North Zone (Delhi-NCR)',
+      region: 'South Zone (Bengaluru)',
       department,
       permissions,
       password: initialPassword,
@@ -211,7 +211,7 @@ export default async function handler(req: any, res: any) {
             role,
             avatar_url: newUser.avatar,
             territory,
-            region: 'North Zone (Delhi-NCR)',
+            region: 'South Zone (Bengaluru)',
             department,
             status: 'Active',
             must_change_password: true,
@@ -229,7 +229,7 @@ export default async function handler(req: any, res: any) {
           role,
           avatar_url: newUser.avatar,
           territory,
-          region: 'North Zone (Delhi-NCR)',
+          region: 'South Zone (Bengaluru)',
           department,
           status: 'Active',
           must_change_password: true,

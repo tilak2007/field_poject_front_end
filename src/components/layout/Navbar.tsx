@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { UserAvatar } from '../common/UserAvatar';
@@ -15,11 +15,14 @@ import {
   LogOut,
   Server,
   ChevronDown,
-  Database,
   KeyRound,
   Users,
+  Wifi,
+  WifiOff,
+  RefreshCw,
 } from 'lucide-react';
 import { CloudConnectionModal } from './CloudConnectionModal';
+import { syncPendingOrders, getPendingOrdersCount } from '../../utils/offlineSync';
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -41,12 +44,55 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showCloudModal, setShowCloudModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    const updateOnline = () => {
+      setIsOnline(navigator.onLine);
+      setPendingSyncCount(getPendingOrdersCount());
+    };
+    const updateOffline = () => {
+      setIsOnline(false);
+      setPendingSyncCount(getPendingOrdersCount());
+    };
+
+    setPendingSyncCount(getPendingOrdersCount());
+    window.addEventListener('online', updateOnline);
+    window.addEventListener('offline', updateOffline);
+
+    const interval = setInterval(() => {
+      setPendingSyncCount(getPendingOrdersCount());
+    }, 10000);
+
+    return () => {
+      window.removeEventListener('online', updateOnline);
+      window.removeEventListener('offline', updateOffline);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleManualSync = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!navigator.onLine) {
+      setShowCloudModal(true);
+      return;
+    }
+    setIsSyncing(true);
+    try {
+      await syncPendingOrders();
+      setPendingSyncCount(getPendingOrdersCount());
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const notifications = [
     {
       id: 1,
       title: 'Geofence Check-in Alert',
-      desc: 'Vikram Sharma checked in at Gupta Kirana (CP)',
+      desc: 'Vikram Sharma checked in at Sri Manjunatha Provision Store (Bengaluru)',
       time: '2 mins ago',
       type: 'success',
       icon: CheckCircle2,
@@ -54,15 +100,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     {
       id: 2,
       title: 'High Value Order Booked',
-      desc: 'Ananya Verma logged order ₹73,200 from Metro Supermarket',
+      desc: 'Vikram Sharma logged order ₹18,480 from Sri Manjunatha Store',
       time: '18 mins ago',
       type: 'order',
       icon: FileText,
     },
     {
       id: 3,
-      title: 'Rep Offline Warning',
-      desc: 'Karan Patel battery dropped below 15%',
+      title: 'Rep Battery Telemetry',
+      desc: 'Rahul Deshmukh battery at 74% (Bengaluru Beat Checkpoint 2)',
       time: '45 mins ago',
       type: 'warning',
       icon: AlertTriangle,
@@ -106,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="text-slate-400">Beat Territory:</span>
-            <span className="font-bold text-white">{user?.territory || 'North Delhi Beat A'}</span>
+            <span className="font-bold text-white">{user?.territory || 'Bengaluru Commercial Beat'}</span>
           </div>
         )}
 
@@ -124,15 +170,39 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right: GPS Sync, Region Selector, Notifications & User Profile */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Permanent Cloud / Database Connection Pill */}
+        {/* Dynamic Cloud / Offline Sync Status Pill */}
         <button
           onClick={() => setShowCloudModal(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/80 hover:bg-slate-800 border border-slate-800 text-xs font-semibold text-slate-300 transition-all cursor-pointer shadow-sm"
-          title="Permanent Supabase Cloud & Offline-First Storage Engine"
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-semibold transition-all cursor-pointer shadow-sm ${
+            isOnline
+              ? 'bg-slate-950/80 hover:bg-slate-800 border-slate-800 text-slate-300'
+              : 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30 text-amber-300'
+          }`}
+          title={isOnline ? 'Online: Cloud Database Synchronized' : 'Offline Mode: Data buffered in LocalStorage'}
         >
-          <Database className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="hidden sm:inline">Permanent Sync</span>
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          {isOnline ? (
+            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+          ) : (
+            <WifiOff className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          )}
+          <span className="hidden sm:inline">
+            {isOnline ? 'Cloud Connected' : 'Offline Mode'}
+          </span>
+          {pendingSyncCount > 0 && (
+            <span
+              onClick={handleManualSync}
+              className="ml-1 px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 text-[10px] font-bold hover:bg-amber-400 flex items-center gap-1"
+              title="Click to sync pending orders now"
+            >
+              <RefreshCw className={`w-2.5 h-2.5 ${isSyncing ? 'animate-spin' : ''}`} />
+              {pendingSyncCount} pending
+            </span>
+          )}
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'
+            }`}
+          />
         </button>
 
         {/* GPS Live Sync Status Pill (Managers / Admins only) */}
@@ -153,19 +223,19 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="bg-transparent text-xs font-medium text-slate-200 focus:outline-none cursor-pointer pr-1"
             >
               <option value="All Regions" className="bg-slate-900 text-slate-200">
-                All India Zones
-              </option>
-              <option value="North Zone" className="bg-slate-900 text-slate-200">
-                North Zone (Delhi-NCR)
-              </option>
-              <option value="West Zone" className="bg-slate-900 text-slate-200">
-                West Zone (Mumbai-Guj)
+                All Bengaluru Zones
               </option>
               <option value="South Zone" className="bg-slate-900 text-slate-200">
-                South Zone (BLR-CHN)
+                Bengaluru South (Jayanagar/JP Nagar)
+              </option>
+              <option value="Central Zone" className="bg-slate-900 text-slate-200">
+                Bengaluru Central (BTM/Koramangala)
               </option>
               <option value="East Zone" className="bg-slate-900 text-slate-200">
-                East Zone (Kolkata)
+                Bengaluru East (Indiranagar/Whitefield)
+              </option>
+              <option value="West Zone" className="bg-slate-900 text-slate-200">
+                Bengaluru West (Banashankari/Rajajinagar)
               </option>
             </select>
           </div>

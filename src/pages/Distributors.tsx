@@ -32,13 +32,13 @@ export const Distributors: React.FC = () => {
 
   // Form fields
   const [name, setName] = useState('');
-  const [region, setRegion] = useState('North Zone (Delhi-NCR)');
+  const [region, setRegion] = useState('South Zone (Bengaluru)');
   const [contactPerson, setContactPerson] = useState('');
   const [phone, setPhone] = useState('');
   const [warehouseCapacityPct, setWarehouseCapacityPct] = useState(80);
   const [stockValue, setStockValue] = useState(5000000);
   const [outstandingBalance, setOutstandingBalance] = useState(1500000);
-  const [coverageAreas, setCoverageAreas] = useState('North Delhi, Gurugram Central, Noida West');
+  const [coverageAreas, setCoverageAreas] = useState('Bengaluru South, Jayanagar, JP Nagar');
 
   const handleAddDistributor = (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +57,7 @@ export const Distributors: React.FC = () => {
       phone: phone.trim() || '+91 98110 00000',
       email: `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}@distributors.fieldassist.io`,
       region,
-      territoryCoverage: areas.length > 0 ? areas : ['North Delhi'],
+      territoryCoverage: areas.length > 0 ? areas : ['Bengaluru South'],
       stockValue: Number(stockValue) || 4500000,
       currentWarehouseCapacityPct: Number(warehouseCapacityPct) || 75,
       creditLimit: (Number(stockValue) || 4500000) * 1.5,
@@ -258,10 +258,10 @@ export const Distributors: React.FC = () => {
                     onChange={(e) => setRegion(e.target.value)}
                     className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="North Zone (Delhi-NCR)">North Zone (Delhi-NCR)</option>
-                    <option value="West Zone (Mumbai-Guj)">West Zone (Mumbai-Guj)</option>
-                    <option value="South Zone (BLR-CHN)">South Zone (BLR-CHN)</option>
-                    <option value="East Zone (Kolkata)">East Zone (Kolkata)</option>
+                    <option value="Bengaluru South">Bengaluru South (Jayanagar - JP Nagar)</option>
+                    <option value="Bengaluru Central">Bengaluru Central (BTM - Koramangala)</option>
+                    <option value="Bengaluru East">Bengaluru East (Indiranagar - Whitefield)</option>
+                    <option value="Bengaluru West">Bengaluru West (Banashankari - Rajajinagar)</option>
                   </select>
                 </div>
 
@@ -312,7 +312,7 @@ export const Distributors: React.FC = () => {
                   type="text"
                   value={coverageAreas}
                   onChange={(e) => setCoverageAreas(e.target.value)}
-                  placeholder="e.g. North Delhi, Noida West, Gurugram"
+                  placeholder="e.g. Bengaluru South, Jayanagar 4th Block, JP Nagar"
                   className="w-full h-10 px-3 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                 />
               </div>

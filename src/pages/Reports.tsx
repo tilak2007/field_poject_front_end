@@ -83,11 +83,11 @@ export const Reports: React.FC = () => {
       `"Export Type","${format}"\n` +
       `"Status","Compliance Verified"\n\n` +
       `"ID","Date","Territory","Rep Name","Retailer Name","Amount (INR)","Status"\n` +
-      `"TXN-101","2026-10-10","North Delhi","Vikram Sharma","Sharma Kirana Store","18500","Approved"\n` +
-      `"TXN-102","2026-10-10","North Delhi","Vikram Sharma","Gupta General Mart","32400","Approved"\n` +
-      `"TXN-103","2026-10-11","South Mumbai","Ananya Verma","Blinkit Dark Store Hub","45800","Delivered"\n` +
-      `"TXN-104","2026-10-11","Bengaluru Central","Rahul Deshmukh","Apollo Pharmacy","12600","Processing"\n` +
-      `"TXN-105","2026-10-12","North Delhi","Priya Patel","Aggarwal Daily Needs","24100","Delivered"\n`;
+      `"TXN-101","2026-10-10","Bengaluru South","Vikram Sharma","Sri Manjunatha Provision Store","18480","Approved"\n` +
+      `"TXN-102","2026-10-10","Bengaluru South","Vikram Sharma","Shree Lakshmi Supermart","32400","Approved"\n` +
+      `"TXN-103","2026-10-11","Bengaluru Central","Ananya Verma","Venkateshwara Traders","45800","Delivered"\n` +
+      `"TXN-104","2026-10-11","Bengaluru East","Rahul Deshmukh","Ganesh Grand Bazaar","12600","Processing"\n` +
+      `"TXN-105","2026-10-12","Bengaluru West","Priya Patel","Balaji Daily Needs","24100","Delivered"\n`;
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

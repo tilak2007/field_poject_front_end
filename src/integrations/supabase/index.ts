@@ -18,7 +18,7 @@ export interface SignInParams {
  * Sign up a new user with Supabase Auth and initialize user profile
  */
 export async function signUp(client: SupabaseClient, params: SignUpParams) {
-  const { email, password, fullName, role = 'Sales Representative', territory = 'North Delhi' } = params;
+  const { email, password, fullName, role = 'Sales Representative', territory = 'Bengaluru South' } = params;
 
   const { data, error } = await client.auth.signUp({
     email,
@@ -47,7 +47,7 @@ export async function signUp(client: SupabaseClient, params: SignUpParams) {
           email,
           role,
           territory,
-          region: 'North Zone (Delhi-NCR)',
+          region: 'South Zone (Bengaluru)',
           department: role === 'Sales Representative' ? 'Field Sales Force' : 'Sales Management',
           avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
         },

@@ -158,7 +158,7 @@ export const Targets: React.FC = () => {
           </h1>
           <p className="text-slate-400 text-xs mt-1">
             {isRep
-              ? `Personal monthly sales quota assigned by your Area Sales Manager (${user?.territory || 'North Delhi Beat A'}).`
+              ? `Personal monthly sales quota assigned by your Area Sales Manager (${user?.territory || 'Bengaluru South Beat A'}).`
               : 'Monthly revenue targets, visit quota tracking, and outlet acquisition goals.'}
           </p>
           <div className="flex items-center gap-2 mt-2">
@@ -260,7 +260,7 @@ export const Targets: React.FC = () => {
                 </h3>
                 <p className="text-xs text-brand-400 mt-0.5 font-medium flex items-center gap-1">
                   <MapPin className="w-3.5 h-3.5" />
-                  <span>Allocated Area: {user?.territory || 'North Delhi (Sector 14 & 18)'}</span>
+                  <span>Allocated Area: {user?.territory || 'Bengaluru South (Jayanagar & JP Nagar)'}</span>
                 </p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Assigned by: <strong className="text-slate-200">Area Sales Manager</strong>
@@ -344,12 +344,11 @@ export const Targets: React.FC = () => {
                     onChange={(e) => setRepName(e.target.value)}
                     className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="Vikram Sharma">Vikram Sharma (North Delhi)</option>
-                    <option value="Ananya Verma">Ananya Verma (South Mumbai)</option>
-                    <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru)</option>
-                    <option value="Priya Patel">Priya Patel (Ahmedabad)</option>
-                    <option value="Amit Singh">Amit Singh (West Delhi)</option>
-                    <option value="Neha Gupta">Neha Gupta (Kolkata)</option>
+                    <option value="Vikram Sharma">Vikram Sharma (Bengaluru South)</option>
+                    <option value="Ananya Verma">Ananya Verma (Bengaluru Central)</option>
+                    <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru East)</option>
+                    <option value="Priya Patel">Priya Patel (Bengaluru West)</option>
+                    <option value="Amit Singh">Amit Singh (Bengaluru North)</option>
                   </select>
                 </div>
 

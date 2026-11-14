@@ -165,14 +165,14 @@ const fallbackIpLocation = async (
     }
   }
 
-  // Default fallback if all fail: New Delhi Central
+  // Default fallback if all fail: Bengaluru
   onSuccess({
-    lat: 28.6139,
-    lng: 77.209,
-    accuracy: 500,
+    lat: 12.9295,
+    lng: 77.5830,
+    accuracy: 50,
     source: 'ip-location',
-    city: 'Delhi',
+    city: 'Bengaluru',
     country: 'India',
   });
-  onStatusUpdate?.('📍 Defaulting to regional hub (Delhi-NCR)');
+  onStatusUpdate?.('📍 Defaulting to regional hub (Bengaluru)');
 };

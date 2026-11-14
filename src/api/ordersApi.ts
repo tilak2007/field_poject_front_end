@@ -102,10 +102,11 @@ export const ordersApi = {
         body: JSON.stringify(data),
       });
       if (res && res.data) {
+        const syncedOrder = { ...res.data, syncStatus: 'synced', synced: true };
         const local = getLocalOrders();
-        const updated = [res.data, ...local.filter((o) => o.id !== res.data.id)];
+        const updated = [syncedOrder, ...local.filter((o) => o.id !== res.data.id)];
         saveLocalOrders(updated);
-        return res.data;
+        return syncedOrder;
       }
     } catch (err) {
       console.warn('Backend /api/orders POST notice:', err);
@@ -115,26 +116,29 @@ export const ordersApi = {
     try {
       const payload = {
         ...data,
-        order_number: `ORD-2026-${Date.now().toString().slice(-4)}`,
+        order_number: `ORD-BLR-${Date.now().toString().slice(-4)}`,
         date: new Date().toISOString().split('T')[0],
       };
 
       const { data: inserted, error } = await supabase.from('orders').insert([payload]).select().single();
       if (!error && inserted) {
+        const syncedOrder = { ...(inserted as Order), syncStatus: 'synced', synced: true };
         const local = getLocalOrders();
-        saveLocalOrders([inserted as Order, ...local]);
-        return inserted as Order;
+        saveLocalOrders([syncedOrder, ...local]);
+        return syncedOrder;
       }
     } catch {}
 
-    // 3. Fallback Local Persistence
+    // 3. Fallback Local Persistence (Offline Mode Buffer)
     await simulateNetworkDelay(150);
     const newOrder: Order = {
       ...data,
       id: `ord-${Date.now()}`,
-      orderNumber: `ORD-2026-${Date.now().toString().slice(-4)}`,
+      orderNumber: `ORD-BLR-${Date.now().toString().slice(-4)}`,
       date: new Date().toISOString().split('T')[0],
     };
+    (newOrder as any).syncStatus = 'pending';
+    (newOrder as any).synced = false;
     const local = getLocalOrders();
     saveLocalOrders([newOrder, ...local]);
     return newOrder;

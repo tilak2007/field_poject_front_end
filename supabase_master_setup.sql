@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   email TEXT UNIQUE NOT NULL,
   role TEXT NOT NULL DEFAULT 'Sales Manager',
   avatar_url TEXT,
-  territory TEXT DEFAULT 'North Delhi',
-  region TEXT DEFAULT 'North Zone (Delhi-NCR)',
+  territory TEXT DEFAULT 'Bengaluru South',
+  region TEXT DEFAULT 'South Zone (Bengaluru)',
   department TEXT DEFAULT 'Field Sales Force',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -460,26 +460,26 @@ $$;
 -- SALES REPS
 INSERT INTO public.sales_reps (id, name, code, avatar, phone, email, territory, region, status, battery_level, last_check_in, target_amount, target_achieved_pct, visits_today_count, total_distance_km, sales_closed_amount, join_date)
 VALUES 
-('rep-1', 'Vikram Sharma', 'REP-DEL-001', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', '+91 98220 11223', 'vikram@fieldassist.io', 'North Delhi', 'North Zone (Delhi-NCR)', 'In Visit', 88, '10 mins ago', 500000.00, 84.5, 12, 24.8, 422500.00, '2024-03-15'),
-('rep-2', 'Ananya Verma', 'REP-DEL-002', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80', '+91 98112 33445', 'ananya@fieldassist.io', 'South Mumbai', 'West Zone', 'On Route', 94, '5 mins ago', 600000.00, 92.0, 15, 31.2, 552000.00, '2023-11-01'),
-('rep-3', 'Rahul Mehta', 'REP-BLR-003', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', '+91 98334 55667', 'rahul@fieldassist.io', 'Bengaluru Central', 'South Zone', 'Moving', 76, '2 mins ago', 450000.00, 78.0, 10, 19.5, 351000.00, '2024-01-10')
+('rep-1', 'Vikram Sharma', 'REP-BLR-001', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', '+91 98220 11223', 'vikram@fieldassist.io', 'Bengaluru South', 'South Zone (Bengaluru)', 'In Visit', 88, '10 mins ago', 500000.00, 84.5, 12, 24.8, 422500.00, '2024-03-15'),
+('rep-2', 'Ananya Verma', 'REP-BLR-002', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80', '+91 98112 33445', 'ananya@fieldassist.io', 'Bengaluru Central', 'South Zone (Bengaluru)', 'On Route', 94, '5 mins ago', 600000.00, 92.0, 15, 31.2, 552000.00, '2023-11-01'),
+('rep-3', 'Rahul Mehta', 'REP-BLR-003', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', '+91 98334 55667', 'rahul@fieldassist.io', 'Bengaluru East', 'South Zone (Bengaluru)', 'Moving', 76, '2 mins ago', 450000.00, 78.0, 10, 19.5, 351000.00, '2024-01-10')
 ON CONFLICT (id) DO NOTHING;
 
 -- DISTRIBUTORS
 INSERT INTO public.distributors (id, name, code, contact_person, phone, email, region, territory_coverage, stock_value, current_warehouse_capacity_pct, credit_limit, outstanding_balance, status)
 VALUES
-('dist-1', 'Apex FMCG Logistics Ltd', 'DST-901', 'Manish Malhotra', '+91 91122 33445', 'supply@apexfmcg.com', 'North Zone', ARRAY['North Delhi', 'West Delhi', 'Rohini Hub'], 4850000, 78, 7500000, 1250000, 'Active'),
-('dist-2', 'Western Gateway Distributors', 'DST-902', 'Kunal Singhania', '+91 92233 44556', 'kunal@westerngateway.com', 'West Zone', ARRAY['South Mumbai', 'Bandra West', 'Andheri East'], 6200000, 85, 10000000, 3100000, 'Active'),
-('dist-3', 'Southern Express Distributors', 'DST-903', 'K. V. Subbarao', '+91 93344 55667', 'kv@southernexpress.com', 'South Zone', ARRAY['Bengaluru Central', 'Indiranagar', 'Koramangala'], 5100000, 62, 8000000, 1800000, 'Active')
+('dist-1', 'Apex Karnataka FMCG Logistics Ltd', 'DST-901', 'Manish Gowda', '+91 91122 33445', 'supply@apexfmcg.com', 'South Zone (Bengaluru)', ARRAY['Bengaluru South', 'Bengaluru Central', 'Jayanagar Belt'], 4850000, 78, 7500000, 1250000, 'Active'),
+('dist-2', 'Bengaluru Metro Distributors', 'DST-902', 'Kunal Hegde', '+91 92233 44556', 'kunal@bengalurumetro.com', 'South Zone (Bengaluru)', ARRAY['Bengaluru West', 'Banashankari Hub', 'Rajajinagar Belt'], 6200000, 85, 10000000, 3100000, 'Active'),
+('dist-3', 'Southern Express Distributors', 'DST-903', 'K. V. Subbarao', '+91 93344 55667', 'kv@southernexpress.com', 'South Zone (Bengaluru)', ARRAY['Bengaluru East', 'Indiranagar Hub', 'Koramangala Loop'], 5100000, 62, 8000000, 1800000, 'Active')
 ON CONFLICT (id) DO NOTHING;
 
 -- RETAILERS
 INSERT INTO public.retailers (id, name, owner_name, code, type, phone, address, territory, city, distributor_id, outstanding_balance, credit_limit, last_order_date, last_visit_date, assigned_rep_name, assigned_rep_id, latitude, longitude, status, rating)
 VALUES
-('ret-101', 'Gupta Kirana & General Stores', 'Ramesh Gupta', 'RET-001', 'Kirana', '+91 98112 23344', 'Shop 14, Main Market, Sector 18, Rohini', 'North Delhi', 'New Delhi', 'dist-1', 14500.00, 50000.00, '2026-10-20', '2026-10-24', 'Vikram Sharma', 'rep-1', 28.7185, 77.1265, 'Active', 5.0),
-('ret-102', 'Modern Super Bazaar', 'Kavita Singh', 'RET-002', 'Supermarket', '+91 98223 34455', 'Plot 45, DDA Commercial Complex, Sector 15', 'North Delhi', 'New Delhi', 'dist-1', 32000.00, 100000.00, '2026-10-22', '2026-10-24', 'Vikram Sharma', 'rep-1', 28.7290, 77.1350, 'Active', 5.0),
-('ret-103', 'Sri Krishna Provisions & Co', 'Venkatesh Rao', 'RET-003', 'Kirana', '+91 98442 11223', '100 Feet Road, Indiranagar', 'Bengaluru Central', 'Bengaluru', 'dist-3', 8500.00, 40000.00, '2026-10-21', '2026-10-23', 'Rahul Mehta', 'rep-3', 12.9716, 77.5946, 'Active', 4.5),
-('ret-104', 'National Wholesale Traders', 'Harish Chandra', 'RET-004', 'Wholesale', '+91 98334 55667', 'Grain Market Yard, Lawrence Road', 'North Delhi', 'New Delhi', 'dist-1', 75000.00, 200000.00, '2026-10-23', '2026-10-24', 'Vikram Sharma', 'rep-1', 28.6920, 77.1420, 'Active', 4.0)
+('ret-101', 'Sri Manjunatha Provision Store', 'Manjunath Gowda', 'RET-001', 'Kirana', '+91 98112 23344', 'Shop 14, 11th Main Rd, 4th Block, Jayanagar', 'Bengaluru South', 'Bengaluru', 'dist-1', 14500.00, 50000.00, '2026-10-20', '2026-10-24', 'Vikram Sharma', 'rep-1', 12.9295, 77.5830, 'Active', 5.0),
+('ret-102', 'Shree Lakshmi Supermart', 'Lakshmi Narayana', 'RET-002', 'Supermarket', '+91 98223 34455', 'Plot 45, 24th Main, 7th Phase, JP Nagar', 'Bengaluru South', 'Bengaluru', 'dist-1', 32000.00, 100000.00, '2026-10-22', '2026-10-24', 'Vikram Sharma', 'rep-1', 12.9082, 77.5740, 'Active', 5.0),
+('ret-103', 'Venkateshwara Traders', 'R. Venkatesh', 'RET-003', 'Kirana', '+91 98442 11223', 'Outer Ring Rd, BTM Layout 2nd Stage', 'Bengaluru Central', 'Bengaluru', 'dist-3', 8500.00, 40000.00, '2026-10-21', '2026-10-23', 'Rahul Mehta', 'rep-3', 12.9165, 77.6101, 'Active', 4.5),
+('ret-104', 'Ganesh Grand Bazaar', 'Ganesh Hegde', 'RET-004', 'Wholesale', '+91 98334 55667', '80 Feet Rd, 5th Block, Koramangala', 'Bengaluru East', 'Bengaluru', 'dist-1', 75000.00, 200000.00, '2026-10-23', '2026-10-24', 'Vikram Sharma', 'rep-1', 12.9340, 77.6220, 'Active', 4.0)
 ON CONFLICT (id) DO NOTHING;
 
 -- PRODUCTS
@@ -497,13 +497,13 @@ ON CONFLICT (id) DO UPDATE SET is_active = true;
 -- ORDERS
 INSERT INTO public.orders (id, order_number, retailer_id, retailer_name, distributor_id, distributor_name, rep_id, rep_name, date, total_amount, payment_status, order_status, delivery_date_estimated)
 VALUES
-('ord-501', 'ORD-20261024-8812', 'ret-101', 'Gupta Kirana & General Stores', 'dist-1', 'Apex FMCG Logistics Ltd', 'rep-1', 'Vikram Sharma', CURRENT_DATE, 18480.00, 'Pending', 'Processing', CURRENT_DATE + 2),
-('ord-502', 'ORD-20261024-8815', 'ret-102', 'Modern Super Bazaar', 'dist-1', 'Apex FMCG Logistics Ltd', 'rep-1', 'Vikram Sharma', CURRENT_DATE, 43200.00, 'Paid', 'Approved', CURRENT_DATE + 1)
+('ord-501', 'ORD-BLR-20261024-8812', 'ret-101', 'Sri Manjunatha Provision Store', 'dist-1', 'Apex Karnataka FMCG Logistics Ltd', 'rep-1', 'Vikram Sharma', CURRENT_DATE, 18480.00, 'Pending', 'Processing', CURRENT_DATE + 2),
+('ord-502', 'ORD-BLR-20261024-8815', 'ret-102', 'Shree Lakshmi Supermart', 'dist-1', 'Apex Karnataka FMCG Logistics Ltd', 'rep-1', 'Vikram Sharma', CURRENT_DATE, 43200.00, 'Paid', 'Approved', CURRENT_DATE + 1)
 ON CONFLICT (id) DO NOTHING;
 
 -- VISITS
 INSERT INTO public.visits (id, visit_code, retailer_id, retailer_name, retailer_address, rep_id, rep_name, beat_name, planned_time, actual_check_in, actual_check_out, visit_type, status, geofence_verified, order_booked_amount, notes)
 VALUES
-('vis-301', 'VST-20261024-01', 'ret-101', 'Gupta Kirana & General Stores', 'Shop 14, Main Market, Sector 18', 'rep-1', 'Vikram Sharma', 'Rohini Sector Beat A', '09:30 AM', '09:34 AM', '09:58 AM', 'Regular Order', 'Completed', true, 18480.00, 'Restocked beverage shelf, ordered 10 cases'),
-('vis-302', 'VST-20261024-02', 'ret-102', 'Modern Super Bazaar', 'Plot 45, DDA Commercial Complex, Sector 15', 'rep-1', 'Vikram Sharma', 'Rohini Sector Beat A', '10:15 AM', '10:20 AM', '10:50 AM', 'Collection', 'Completed', true, 43200.00, 'Verified stock display and placed seasonal order')
+('vis-301', 'VST-BLR-20261024-01', 'ret-101', 'Sri Manjunatha Provision Store', 'Shop 14, 11th Main Rd, 4th Block, Jayanagar', 'rep-1', 'Vikram Sharma', 'Jayanagar Retail Beat Loop', '09:30 AM', '09:34 AM', '09:58 AM', 'Regular Order', 'Completed', true, 18480.00, 'Restocked beverage shelf, ordered 10 cases'),
+('vis-302', 'VST-BLR-20261024-02', 'ret-102', 'Shree Lakshmi Supermart', 'Plot 45, 24th Main, 7th Phase, JP Nagar', 'rep-1', 'Vikram Sharma', 'JP Nagar Retail Beat Loop', '10:15 AM', '10:20 AM', '10:50 AM', 'Collection', 'Completed', true, 43200.00, 'Verified stock display and placed seasonal order')
 ON CONFLICT (id) DO NOTHING;

@@ -30,7 +30,7 @@ export const BeatPlans: React.FC = () => {
   const [beatName, setBeatName] = useState('');
   const [beatCode, setBeatCode] = useState('');
   const [repName, setRepName] = useState('Vikram Sharma');
-  const [territory, setTerritory] = useState('North Delhi');
+  const [territory, setTerritory] = useState('Bengaluru South');
   const [scheduledDay, setScheduledDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'>('Monday');
   const [retailersCount, setRetailersCount] = useState(16);
   const [estimatedDistanceKm, setEstimatedDistanceKm] = useState(15.5);
@@ -38,7 +38,7 @@ export const BeatPlans: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     const nextNumber = beatPlansList.length + 1;
-    setBeatCode(`BEAT-DEL-${String(nextNumber).padStart(2, '0')}`);
+    setBeatCode(`BEAT-BLR-${String(nextNumber).padStart(2, '0')}`);
     setBeatName('');
     setShowCreateModal(true);
   };
@@ -319,11 +319,11 @@ export const BeatPlans: React.FC = () => {
                       onChange={(e) => setRepName(e.target.value)}
                       className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                     >
-                      <option value="Vikram Sharma">Vikram Sharma (North Delhi)</option>
-                      <option value="Ananya Verma">Ananya Verma (South Mumbai)</option>
-                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru)</option>
-                      <option value="Priya Patel">Priya Patel (Ahmedabad)</option>
-                      <option value="Amit Singh">Amit Singh (West Delhi)</option>
+                      <option value="Vikram Sharma">Vikram Sharma (Bengaluru South)</option>
+                      <option value="Ananya Verma">Ananya Verma (Bengaluru Central)</option>
+                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru East)</option>
+                      <option value="Priya Patel">Priya Patel (Bengaluru West)</option>
+                      <option value="Amit Singh">Amit Singh (Bengaluru North)</option>
                     </select>
                   </div>
 
@@ -353,12 +353,11 @@ export const BeatPlans: React.FC = () => {
                       onChange={(e) => setTerritory(e.target.value)}
                       className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                     >
-                      <option value="North Delhi">North Delhi</option>
-                      <option value="West Delhi">West Delhi</option>
-                      <option value="South Delhi">South Delhi</option>
-                      <option value="East Delhi">East Delhi</option>
-                      <option value="South Mumbai">South Mumbai</option>
+                      <option value="Bengaluru South">Bengaluru South</option>
                       <option value="Bengaluru Central">Bengaluru Central</option>
+                      <option value="Bengaluru East">Bengaluru East</option>
+                      <option value="Bengaluru West">Bengaluru West</option>
+                      <option value="Bengaluru North">Bengaluru North</option>
                     </select>
                   </div>
 

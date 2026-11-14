@@ -265,7 +265,7 @@ export const LiveTracking: React.FC = () => {
                 {isRep
                   ? `Real-time satellite positioning and route tracking for ${
                       user?.name || 'Vikram Sharma'
-                    } (${user?.territory || 'North Delhi Beat A'}). Confidential sales rep tracking.`
+                    } (${user?.territory || 'Bengaluru South Beat A'}). Confidential sales rep tracking.`
                   : 'Real-time satellite positioning, speed telemetry, automated geofence detection, and live breadcrumb route tracking powered by OpenStreetMap.'}
               </p>
             </div>
@@ -324,16 +324,13 @@ export const LiveTracking: React.FC = () => {
               }}
               className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 focus:outline-none focus:border-brand-500 cursor-pointer"
             >
-              <option value="" disabled>Select Target City / Location</option>
+              <option value="" disabled>Select Bengaluru Beat Location</option>
               <option value="gps">📡 Auto-Detect My Live Device GPS</option>
-              <option value="12.9716:77.5946:Bengaluru">Bengaluru (Karnataka)</option>
-              <option value="28.6139:77.2090:Delhi-NCR">Delhi-NCR (Central)</option>
-              <option value="19.0760:72.8777:Mumbai">Mumbai (Maharashtra)</option>
-              <option value="17.3850:78.4867:Hyderabad">Hyderabad (Telangana)</option>
-              <option value="13.0827:80.2707:Chennai">Chennai (Tamil Nadu)</option>
-              <option value="22.5726:88.3639:Kolkata">Kolkata (West Bengal)</option>
-              <option value="18.5204:73.8567:Pune">Pune (Maharashtra)</option>
-              <option value="23.0225:72.5714:Ahmedabad">Ahmedabad (Gujarat)</option>
+              <option value="12.9295:77.5830:Bengaluru South (Jayanagar)">Bengaluru South (Jayanagar 4th Block)</option>
+              <option value="12.9082:77.5740:Bengaluru South (JP Nagar)">Bengaluru South (JP Nagar 7th Phase)</option>
+              <option value="12.9165:77.6101:Bengaluru Central (BTM Layout)">Bengaluru Central (BTM Layout 2nd Stage)</option>
+              <option value="12.9340:77.6220:Bengaluru East (Koramangala)">Bengaluru East (Koramangala 5th Block)</option>
+              <option value="12.9220:77.5680:Bengaluru West (Banashankari)">Bengaluru West (Banashankari 2nd Stage)</option>
             </select>
           </div>
 
