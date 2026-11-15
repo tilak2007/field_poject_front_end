@@ -187,7 +187,9 @@ export default async function handler(req: any, res: any) {
     // Save to SYSTEM_ACCOUNTS
     SYSTEM_ACCOUNTS[normEmail] = newUser;
 
-    // Create in Supabase if service role key is configured
+    // Create in Supabase Auth & user_profiles
+    let supaUserId: string | null = null;
+
     if (SUPABASE_SERVICE_ROLE_KEY) {
       try {
         const { data: supaUser, error: supaErr } = await supabase.auth.admin.createUser({
@@ -203,27 +205,42 @@ export default async function handler(req: any, res: any) {
         });
 
         if (!supaErr && supaUser?.user) {
-          newUser.id = supaUser.user.id;
-          await supabase.from('user_profiles').upsert({
-            id: supaUser.user.id,
-            full_name: fullName.trim(),
-            email: normEmail,
-            role,
-            avatar_url: newUser.avatar,
-            territory,
-            region: 'South Zone (Bengaluru)',
-            department,
-            status: 'Active',
-            must_change_password: true,
-          });
+          supaUserId = supaUser.user.id;
         }
       } catch (err) {
         console.warn('Supabase admin createUser note:', err);
       }
-    } else {
-      // If service role key not provided, insert into user_profiles directly
+    }
+
+    // Fallback: If service role key not provided or admin.createUser failed, create via auth.signUp
+    if (!supaUserId) {
+      try {
+        const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+          email: normEmail,
+          password: initialPassword,
+          options: {
+            data: {
+              full_name: fullName.trim(),
+              role,
+              territory,
+              must_change_password: true,
+            },
+          },
+        });
+
+        if (!signUpErr && signUpData?.user) {
+          supaUserId = signUpData.user.id;
+        }
+      } catch (signUpError) {
+        console.warn('Supabase signUp fallback note:', signUpError);
+      }
+    }
+
+    if (supaUserId) {
+      newUser.id = supaUserId;
       try {
         await supabase.from('user_profiles').upsert({
+          id: supaUserId,
           full_name: fullName.trim(),
           email: normEmail,
           role,
@@ -235,7 +252,7 @@ export default async function handler(req: any, res: any) {
           must_change_password: true,
         });
       } catch (dbErr) {
-        console.warn('user_profiles direct insert note:', dbErr);
+        console.warn('user_profiles upsert note:', dbErr);
       }
     }
 

@@ -126,9 +126,26 @@ export const adminUsersApi = {
       createdAt: new Date().toISOString(),
     };
 
-    // Attempt Supabase insert if available
+    // Attempt Supabase Auth & user_profiles creation
     try {
+      const { data: supaAuthData } = await supabase.auth.signUp({
+        email,
+        password: 'role@123',
+        options: {
+          data: {
+            full_name: fullName,
+            role,
+            territory,
+            must_change_password: true,
+          },
+        },
+      });
+
+      const effectiveId = supaAuthData?.user?.id || newUser.id;
+      newUser.id = effectiveId;
+
       await supabase.from('user_profiles').upsert({
+        id: effectiveId,
         full_name: fullName,
         email,
         role,
@@ -138,7 +155,7 @@ export const adminUsersApi = {
         must_change_password: true,
       });
     } catch (err) {
-      console.warn('Direct Supabase profile upsert note:', err);
+      console.warn('Supabase client user creation note:', err);
     }
 
     // Save into permanent registry with temporary password "role@123"

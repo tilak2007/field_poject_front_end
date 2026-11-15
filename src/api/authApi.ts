@@ -94,6 +94,24 @@ export const PERMANENT_ACCOUNTS: Record<string, { user: User; password: string }
     },
     password: 'rep123',
   },
+  'nagarjunbg183@gmail.com': {
+    user: {
+      id: 'usr-nagarjun-03',
+      name: 'Nagarjun B.G.',
+      email: 'nagarjunbg183@gmail.com',
+      role: 'Sales Representative',
+      status: 'Active',
+      mustChangePassword: true,
+      avatar: '',
+      territory: 'Bengaluru South',
+      region: 'South Zone (Bengaluru)',
+      phone: '+91 98450 11223',
+      department: 'Field Sales Force',
+      permissions: ['read:own', 'write:visits', 'write:orders', 'punch:attendance'],
+      createdAt: '2026-03-10T10:00:00Z',
+    },
+    password: 'role@123',
+  },
 };
 
 // Password complexity validator
@@ -176,7 +194,7 @@ export const authApi = {
         return { user: res.user, token: res.token, expiresIn: res.expiresIn || 604800 };
       }
     } catch (err: any) {
-      if (err?.status === 403 || err?.status === 401) {
+      if (err?.status === 403) {
         throw err;
       }
       console.warn('Backend /api/auth notice, trying fallback auth:', err);

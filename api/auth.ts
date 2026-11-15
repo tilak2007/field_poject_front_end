@@ -90,6 +90,21 @@ export const SYSTEM_ACCOUNTS: Record<string, any> = {
     password: 'rep123',
     createdAt: '2026-03-01T11:00:00Z',
   },
+  'nagarjunbg183@gmail.com': {
+    id: 'usr-nagarjun-03',
+    name: 'Nagarjun B.G.',
+    email: 'nagarjunbg183@gmail.com',
+    role: 'Sales Representative',
+    status: 'Active',
+    mustChangePassword: true,
+    avatar: '',
+    territory: 'Bengaluru South',
+    region: 'South Zone (Bengaluru)',
+    department: 'Field Sales Force',
+    permissions: ['read:own', 'write:visits', 'write:orders', 'punch:attendance'],
+    password: 'role@123',
+    createdAt: '2026-03-10T10:00:00Z',
+  },
 };
 
 // Password complexity validator
@@ -266,22 +281,18 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      if (account.password !== password) {
-        return res.status(401).json({
-          success: false,
-          message: 'Invalid credentials. Please verify your email and password.',
+      if (account.password === password) {
+        const token = `fa_jwt_${account.id}_${Date.now()}`;
+        const { password: _, ...userWithoutPassword } = account;
+
+        return res.status(200).json({
+          success: true,
+          user: userWithoutPassword,
+          token,
+          expiresIn: 604800,
         });
       }
-
-      const token = `fa_jwt_${account.id}_${Date.now()}`;
-      const { password: _, ...userWithoutPassword } = account;
-
-      return res.status(200).json({
-        success: true,
-        user: userWithoutPassword,
-        token,
-        expiresIn: 604800,
-      });
+      // If password does not match local fallback, continue below to check Supabase Auth
     }
 
     // Check Supabase Auth
