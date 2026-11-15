@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin, Download, ShieldAlert } from 'lucide-react';
+import { Target as TargetIcon, Plus, X, CheckCircle2, User, Calendar, IndianRupee, MapPin, Download, ShieldAlert, Clock } from 'lucide-react';
 import { mockTargets } from '../data/mockData';
 import type { Target } from '../types';
 import { useAuth } from '../context/AuthContext';
@@ -35,33 +35,38 @@ export const Targets: React.FC = () => {
   const [visitsTargetCount, setVisitsTargetCount] = useState<number>(160);
   const [newOutletsTargetCount, setNewOutletsTargetCount] = useState<number>(15);
 
+  // Available reps for Manager target allocation dropdown
+  const availableReps = useMemo(() => {
+    const list = [
+      { name: 'Vikram Sharma', territory: 'Bengaluru South' },
+      { name: 'Ananya Verma', territory: 'Bengaluru Central' },
+      { name: 'Rahul Deshmukh', territory: 'Bengaluru East' },
+    ];
+    try {
+      const stored = localStorage.getItem('fieldassist_accounts_registry');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        Object.values(parsed).forEach((acc: any) => {
+          if (acc?.user?.role === 'Sales Representative' && !list.some((r) => r.name === acc.user.name)) {
+            list.push({ name: acc.user.name, territory: acc.user.territory || 'Bengaluru South' });
+          }
+        });
+      }
+    } catch {}
+    return list;
+  }, []);
+
   const repMatchedTargets = targetsList.filter(
     (t) =>
-      t.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-      t.repId === user?.id ||
-      t.repId === 'rep-1'
+      (user?.email === 'vikram@fieldassist.io' && (t.repId === 'rep-1' || t.repName.toLowerCase().includes('vikram'))) ||
+      (user?.id && t.repId === user.id) ||
+      (user?.name && t.repName.toLowerCase() === user.name.toLowerCase()) ||
+      (user?.email && t.repName.toLowerCase().includes(user.email.toLowerCase().split('@')[0]))
   );
 
   // Sales Rep can ONLY see their own personal target. No comparisons or other reps' metrics.
-  const visibleTargets: Target[] = isRep
-    ? repMatchedTargets.length > 0
-      ? [repMatchedTargets[0]]
-      : [
-          {
-            id: 'tgt-personal',
-            repId: user?.id || 'rep-1',
-            repName: user?.name || 'Vikram Sharma',
-            monthYear: 'October 2026',
-            salesTargetAmount: 500000,
-            salesAchievedAmount: 422500,
-            visitsTargetCount: 150,
-            visitsAchievedCount: 128,
-            newOutletsTargetCount: 12,
-            newOutletsAchievedCount: 10,
-            status: 'On Track',
-          },
-        ]
-    : targetsList;
+  // Newly created accounts do NOT receive predefined targets until allocated by Area Sales Manager!
+  const visibleTargets: Target[] = isRep ? repMatchedTargets : targetsList;
 
   const handleOpenAllocateModal = () => {
     if (!isManagerOrAdmin) {
@@ -222,87 +227,105 @@ export const Targets: React.FC = () => {
       )}
 
       {/* Target Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {visibleTargets.map((tgt) => {
-          const salesPct =
-            tgt.salesTargetAmount > 0
-              ? Math.round((tgt.salesAchievedAmount / tgt.salesTargetAmount) * 100)
-              : 0;
+      {visibleTargets.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleTargets.map((tgt) => {
+            const salesPct =
+              tgt.salesTargetAmount > 0
+                ? Math.round((tgt.salesAchievedAmount / tgt.salesTargetAmount) * 100)
+                : 0;
 
-          return (
-            <div
-              key={tgt.id}
-              className="glass-card glass-card-hover p-6 rounded-2xl space-y-5 border border-slate-800"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">{tgt.monthYear}</span>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                    tgt.status === 'Achieved'
-                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : tgt.status === 'On Track'
-                      ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                      : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                  }`}
-                >
-                  {tgt.status}
-                </span>
-              </div>
+            return (
+              <div
+                key={tgt.id}
+                className="glass-card glass-card-hover p-6 rounded-2xl space-y-5 border border-slate-800"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-slate-400">{tgt.monthYear}</span>
+                  <span
+                    className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                      tgt.status === 'Achieved'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : tgt.status === 'On Track'
+                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                    }`}
+                  >
+                    {tgt.status}
+                  </span>
+                </div>
 
-              <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <span>{tgt.repName}</span>
-                  {isRep && (
-                    <span className="px-2 py-0.5 rounded text-[10px] bg-brand-500/20 text-brand-300 font-normal">
-                      Your Assigned Quota
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span>{tgt.repName}</span>
+                    {isRep && (
+                      <span className="px-2 py-0.5 rounded text-[10px] bg-brand-500/20 text-brand-300 font-normal">
+                        Your Assigned Quota
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-brand-400 mt-0.5 font-medium flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5" />
+                    <span>Allocated Area: {user?.territory || 'Bengaluru South (Jayanagar & JP Nagar)'}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Assigned by: <strong className="text-slate-200">Area Sales Manager</strong>
+                  </p>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-2 p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-slate-400">Revenue Achieved</span>
+                    <span className="font-extrabold text-emerald-400">{salesPct}%</span>
+                  </div>
+                  <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-brand-500 to-emerald-400 h-full rounded-full transition-all"
+                      style={{ width: `${Math.min(salesPct, 100)}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-[11px] text-slate-400 font-mono pt-1">
+                    <span>₹{(tgt.salesAchievedAmount / 100000).toFixed(2)}L</span>
+                    <span>Target: ₹{(tgt.salesTargetAmount / 100000).toFixed(2)}L</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                    <span className="text-[10px] text-slate-400 block">Visits Completed</span>
+                    <span className="font-bold text-white">
+                      {tgt.visitsAchievedCount} / {tgt.visitsTargetCount}
                     </span>
-                  )}
-                </h3>
-                <p className="text-xs text-brand-400 mt-0.5 font-medium flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5" />
-                  <span>Allocated Area: {user?.territory || 'Bengaluru South (Jayanagar & JP Nagar)'}</span>
-                </p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Assigned by: <strong className="text-slate-200">Area Sales Manager</strong>
-                </p>
-              </div>
-
-              {/* Progress bar */}
-              <div className="space-y-2 p-3.5 rounded-xl bg-slate-950/60 border border-slate-800">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Revenue Achieved</span>
-                  <span className="font-extrabold text-emerald-400">{salesPct}%</span>
-                </div>
-                <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-brand-500 to-emerald-400 h-full rounded-full transition-all"
-                    style={{ width: `${Math.min(salesPct, 100)}%` }}
-                  />
-                </div>
-                <div className="flex justify-between text-[11px] text-slate-400 font-mono pt-1">
-                  <span>₹{(tgt.salesAchievedAmount / 100000).toFixed(2)}L</span>
-                  <span>Target: ₹{(tgt.salesTargetAmount / 100000).toFixed(2)}L</span>
+                  </div>
+                  <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/60">
+                    <span className="text-[10px] text-slate-400 block">New Outlets</span>
+                    <span className="font-bold text-white">
+                      {tgt.newOutletsAchievedCount} / {tgt.newOutletsTargetCount}
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/60">
-                  <span className="text-[10px] text-slate-400 block">Visits Completed</span>
-                  <span className="font-bold text-white">
-                    {tgt.visitsAchievedCount} / {tgt.visitsTargetCount}
-                  </span>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800/60">
-                  <span className="text-[10px] text-slate-400 block">New Outlets</span>
-                  <span className="font-bold text-white">
-                    {tgt.newOutletsAchievedCount} / {tgt.newOutletsTargetCount}
-                  </span>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="glass-panel p-10 rounded-2xl text-center space-y-4 border border-slate-800 max-w-2xl mx-auto my-6">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+            <TargetIcon className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-white">No Predefined Targets Assigned</h3>
+            <p className="text-xs text-slate-400 leading-relaxed max-w-lg mx-auto">
+              This account has no predefined monthly quotas. In accordance with enterprise sales force governance, monthly targets are assigned exclusively by your <strong>Area Sales Manager (ASM)</strong>.
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-[11px] text-slate-300 font-mono">
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span>Target Status: ₹0 / Pending Manager Allocation</span>
+          </div>
+        </div>
+      )}
 
       {/* Modal: Allocate Monthly Targets (Managers and Admins only) */}
       <AnimatePresence>
@@ -344,11 +367,11 @@ export const Targets: React.FC = () => {
                     onChange={(e) => setRepName(e.target.value)}
                     className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
                   >
-                    <option value="Vikram Sharma">Vikram Sharma (Bengaluru South)</option>
-                    <option value="Ananya Verma">Ananya Verma (Bengaluru Central)</option>
-                    <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru East)</option>
-                    <option value="Priya Patel">Priya Patel (Bengaluru West)</option>
-                    <option value="Amit Singh">Amit Singh (Bengaluru North)</option>
+                    {availableReps.map((r) => (
+                      <option key={r.name} value={r.name}>
+                        {r.name} ({r.territory})
+                      </option>
+                    ))}
                   </select>
                 </div>
 

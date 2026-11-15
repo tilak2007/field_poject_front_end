@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -41,6 +41,7 @@ import {
   mockTopProducts,
   mockOrders,
   mockVisits,
+  mockTargets,
 } from '../data/mockData';
 import { dashboardApi } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -72,15 +73,59 @@ export const Dashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Sales Representative personal trajectory (May to Oct 2026 vs assigned target ₹5L)
-  const repSalesTrajectory = [
-    { month: 'May', actualSales: 380000, target: 450000 },
-    { month: 'Jun', actualSales: 410000, target: 450000 },
-    { month: 'Jul', actualSales: 435000, target: 480000 },
-    { month: 'Aug', actualSales: 460000, target: 480000 },
-    { month: 'Sep', actualSales: 490000, target: 500000 },
-    { month: 'Oct', actualSales: 422500, target: 500000 },
-  ];
+  // Dynamically load target assigned to the current Sales Rep
+  // Newly created accounts do NOT have predefined targets!
+  const repAssignedTarget = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('fieldassist_targets');
+      const list = stored ? JSON.parse(stored) : mockTargets;
+      if (Array.isArray(list)) {
+        const found = list.find(
+          (t: any) =>
+            (user?.id && t.repId === user.id) ||
+            (user?.name && t.repName.toLowerCase() === user.name.toLowerCase()) ||
+            (user?.email === 'vikram@fieldassist.io' && (t.repId === 'rep-1' || t.repName.toLowerCase().includes('vikram')))
+        );
+        if (found) return found;
+      }
+    } catch {}
+
+    // Only seed representative Vikram Sharma has predefined initial targets
+    if (user?.email === 'vikram@fieldassist.io') {
+      return {
+        salesTargetAmount: 500000,
+        salesAchievedAmount: 422500,
+        visitsTargetCount: 150,
+        visitsAchievedCount: 128,
+        status: 'On Track',
+      };
+    }
+
+    // All newly created accounts start with NO predefined targets
+    return null;
+  }, [user]);
+
+  // Sales Representative personal trajectory
+  const repSalesTrajectory = useMemo(() => {
+    if (!repAssignedTarget) return [];
+    if (user?.email === 'vikram@fieldassist.io') {
+      return [
+        { month: 'May', actualSales: 380000, target: 450000 },
+        { month: 'Jun', actualSales: 410000, target: 450000 },
+        { month: 'Jul', actualSales: 435000, target: 480000 },
+        { month: 'Aug', actualSales: 460000, target: 480000 },
+        { month: 'Sep', actualSales: 490000, target: 500000 },
+        { month: 'Oct', actualSales: 422500, target: 500000 },
+      ];
+    }
+    return [
+      {
+        month: 'Current',
+        actualSales: repAssignedTarget.salesAchievedAmount || 0,
+        target: repAssignedTarget.salesTargetAmount || 0,
+      },
+    ];
+  }, [repAssignedTarget, user]);
 
   // Beat Outlets in the Sales Rep's Allocated Area (Bengaluru South Beat A)
   const repBeatOutlets = [
@@ -452,20 +497,61 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-white font-mono">
-                ₹5,00,000
-              </div>
-              <div className="flex items-center gap-1.5 mt-1 text-emerald-400 text-xs font-semibold">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                <span>₹4,22,500 Achieved (84.5%)</span>
-              </div>
-              <div className="mt-2 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: '84.5%' }} />
-              </div>
-              <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                <span>Set by Manager</span>
-                <span className="text-amber-400 font-bold">₹77,500 to goal</span>
-              </div>
+              {repAssignedTarget ? (
+                <>
+                  <div className="text-2xl font-black text-white font-mono">
+                    ₹{repAssignedTarget.salesTargetAmount.toLocaleString('en-IN')}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-emerald-400 text-xs font-semibold">
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <span>
+                      ₹{repAssignedTarget.salesAchievedAmount.toLocaleString('en-IN')} Achieved (
+                      {repAssignedTarget.salesTargetAmount > 0
+                        ? Math.round((repAssignedTarget.salesAchievedAmount / repAssignedTarget.salesTargetAmount) * 100)
+                        : 0}
+                      %)
+                    </span>
+                  </div>
+                  <div className="mt-2 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-emerald-500 h-1.5 rounded-full"
+                      style={{
+                        width: `${
+                          repAssignedTarget.salesTargetAmount > 0
+                            ? Math.min(
+                                100,
+                                Math.round((repAssignedTarget.salesAchievedAmount / repAssignedTarget.salesTargetAmount) * 100)
+                              )
+                            : 0
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                    <span>Set by Area Sales Manager</span>
+                    <span className="text-amber-400 font-bold">
+                      ₹{Math.max(0, repAssignedTarget.salesTargetAmount - repAssignedTarget.salesAchievedAmount).toLocaleString('en-IN')} to goal
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-black text-slate-300 font-mono">
+                    Not Assigned
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-amber-400 text-xs font-semibold">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>₹0.00 Achieved (0%)</span>
+                  </div>
+                  <div className="mt-2 w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-slate-700 h-1.5 rounded-full" style={{ width: '0%' }} />
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
+                    <span>Pending ASM Allocation</span>
+                    <span className="text-slate-500 font-medium">No quota set</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -688,7 +774,9 @@ export const Dashboard: React.FC = () => {
                   <span>My Target Fulfillment Trajectory</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Personal Sales vs Manager-Assigned Target (₹5.0 Lakhs)
+                  {repAssignedTarget
+                    ? `Personal Sales vs Manager-Assigned Target (₹${(repAssignedTarget.salesTargetAmount / 100000).toFixed(1)} Lakhs)`
+                    : 'Personal Sales vs Manager-Assigned Target (Pending Allocation)'}
                 </p>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-brand-500/10 text-brand-300 text-[11px] font-semibold border border-brand-500/20">
@@ -696,48 +784,65 @@ export const Dashboard: React.FC = () => {
               </span>
             </div>
 
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={repSalesTrajectory}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
-                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis
-                    stroke="#94a3b8"
-                    fontSize={11}
-                    tickLine={false}
-                    tickFormatter={(v) => `₹${v / 1000}k`}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#0f172a',
-                      borderColor: '#334155',
-                      borderRadius: '0.75rem',
-                      fontSize: '12px',
-                    }}
-                    formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, '']}
-                  />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
-                  <Line
-                    type="monotone"
-                    dataKey="actualSales"
-                    name="My Actual Sales"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: '#3b82f6' }}
-                    activeDot={{ r: 6 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="target"
-                    name="Manager Target"
-                    stroke="#10b981"
-                    strokeWidth={2}
-                    strokeDasharray="4 4"
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            {repAssignedTarget && repSalesTrajectory.length > 0 ? (
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={repSalesTrajectory}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.5} />
+                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                    <YAxis
+                      stroke="#94a3b8"
+                      fontSize={11}
+                      tickLine={false}
+                      tickFormatter={(v) => `₹${v / 1000}k`}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: '#0f172a',
+                        borderColor: '#334155',
+                        borderRadius: '0.75rem',
+                        fontSize: '12px',
+                      }}
+                      formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, '']}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} />
+                    <Line
+                      type="monotone"
+                      dataKey="actualSales"
+                      name="My Actual Sales"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: '#3b82f6' }}
+                      activeDot={{ r: 6 }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="target"
+                      name="Manager Target"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      strokeDasharray="4 4"
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="h-72 w-full flex flex-col items-center justify-center text-center p-6 space-y-3 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+                  <TargetIcon className="w-6 h-6" />
+                </div>
+                <div className="space-y-1 max-w-sm">
+                  <h3 className="text-sm font-bold text-white">No Predefined Target Assigned</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    This account currently has no predefined targets. Once your Area Sales Manager assigns your monthly quota from the Targets portal, your performance trajectory will appear here.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono text-amber-400/90 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+                  Target Status: ₹0 / Pending Manager Allocation
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Rep's Allocated Area Beat Outlets & Daily Visit Checklist */}
