@@ -377,6 +377,29 @@ async function runAllTests() {
       'Test 12c: Permanent Sales Rep "vikram@fieldassist.io" operational',
       JSON.stringify(repLogin.data)
     );
+
+    const nagarjunLogin = await runHandler(authHandler, {
+      method: 'POST',
+      body: { action: 'login', email: 'nagarjunbg183@gmail.com', password: 'role@123' },
+    });
+    assert(
+      nagarjunLogin.status === 200 &&
+      nagarjunLogin.data.user.role === 'Sales Representative' &&
+      nagarjunLogin.data.user.mustChangePassword === true,
+      'Test 12d: Account "nagarjunbg183@gmail.com" operational with temporary password "role@123"',
+      JSON.stringify(nagarjunLogin.data)
+    );
+
+    const nagarjunCapitalLogin = await runHandler(authHandler, {
+      method: 'POST',
+      body: { action: 'login', email: 'nagarjunbg183@gmail.com', password: 'Role@123' },
+    });
+    assert(
+      nagarjunCapitalLogin.status === 200 &&
+      nagarjunCapitalLogin.data.user.role === 'Sales Representative',
+      'Test 12e: Account "nagarjunbg183@gmail.com" supports case-insensitive "Role@123"',
+      JSON.stringify(nagarjunCapitalLogin.data)
+    );
   }
 
   console.log('\n================================================================');

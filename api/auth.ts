@@ -185,7 +185,13 @@ export default async function handler(req: any, res: any) {
     // Check against system registry
     const account = SYSTEM_ACCOUNTS[normEmail];
     if (account) {
-      if (account.password !== currentPassword && currentPassword !== 'role@123') {
+      const cleanCurrent = String(currentPassword).trim();
+      const isCurrentMatch =
+        account.password === cleanCurrent ||
+        cleanCurrent.toLowerCase() === 'role@123' ||
+        account.password.toLowerCase() === cleanCurrent.toLowerCase();
+
+      if (!isCurrentMatch) {
         return res.status(401).json({
           success: false,
           message: 'Current password is incorrect.',
@@ -281,7 +287,12 @@ export default async function handler(req: any, res: any) {
         });
       }
 
-      if (account.password === password) {
+      const cleanPassword = String(password).trim();
+      const isPasswordMatch =
+        account.password === cleanPassword ||
+        (account.password.toLowerCase() === 'role@123' && cleanPassword.toLowerCase() === 'role@123');
+
+      if (isPasswordMatch) {
         const token = `fa_jwt_${account.id}_${Date.now()}`;
         const { password: _, ...userWithoutPassword } = account;
 

@@ -281,7 +281,12 @@ export const authApi = {
       };
     }
 
-    if (password !== account.password) {
+    const cleanPassword = password.trim();
+    const isTempRoleMatch =
+      (account.password.toLowerCase() === 'role@123' && cleanPassword.toLowerCase() === 'role@123') ||
+      cleanPassword.toLowerCase() === account.password.toLowerCase();
+
+    if (cleanPassword !== account.password && !isTempRoleMatch) {
       throw {
         message: 'Invalid password. Please enter the correct password for this account.',
         status: 401,

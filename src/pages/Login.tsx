@@ -16,7 +16,7 @@ export const Login: React.FC = () => {
     clearError();
 
     try {
-      const authenticatedUser = await login({ email, password });
+      const authenticatedUser = await login({ email: email.trim(), password: password.trim() });
 
       // First-login mandatory password change check
       if (authenticatedUser?.mustChangePassword) {
