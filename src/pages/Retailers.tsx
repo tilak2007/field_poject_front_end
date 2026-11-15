@@ -96,7 +96,21 @@ export const Retailers: React.FC = () => {
     }
   }, [id, retailersList]);
 
-  const filteredRetailers = retailersList.filter((r) => {
+  const isRep = !isManagerOrAdmin;
+  const userTerritory = user?.territory || 'Bengaluru South';
+  const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+
+  const territoryRetailers = isRep
+    ? retailersList.filter(
+        (r) =>
+          r.territory?.toLowerCase().includes(userTerritory.toLowerCase()) ||
+          userTerritory.toLowerCase().includes(r.territory?.toLowerCase() || '')
+      )
+    : retailersList;
+
+  const baseRetailers = (isRep && territoryRetailers.length > 0) ? territoryRetailers : retailersList;
+
+  const filteredRetailers = baseRetailers.filter((r) => {
     const matchesSearch =
       r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,11 +125,15 @@ export const Retailers: React.FC = () => {
 
   // Filter visits & orders associated with selectedRetailer
   const retailerVisits = selectedRetailer
-    ? mockVisits.filter((v) => v.retailerId === selectedRetailer.id || v.retailerName === selectedRetailer.name)
+    ? (isNewRep
+        ? []
+        : mockVisits.filter((v) => v.retailerId === selectedRetailer.id || v.retailerName === selectedRetailer.name))
     : [];
 
   const retailerOrders = selectedRetailer
-    ? mockOrders.filter((o) => o.retailerId === selectedRetailer.id || o.retailerName === selectedRetailer.name)
+    ? (isNewRep
+        ? []
+        : mockOrders.filter((o) => o.retailerId === selectedRetailer.id || o.retailerName === selectedRetailer.name))
     : [];
 
   const handleOpenDetails = (ret: Retailer) => {
@@ -315,6 +333,33 @@ export const Retailers: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Territory Retail Network Notice for Representative */}
+      {isRep && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-slate-900 to-indigo-950/40 border border-indigo-500/30 flex items-center justify-between gap-3 text-xs shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400 shrink-0">
+              <Store className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-sm">
+                  Assigned Retail Network: <strong className="text-indigo-300">{userTerritory}</strong>
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30">
+                  Specified Area
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs mt-0.5">
+                Showing all verified commercial outlets, supermarkets, and kirana stores in your designated territory.
+              </p>
+            </div>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 font-bold text-xs border border-indigo-500/30 shrink-0">
+            {filteredRetailers.length} Stores Available
+          </span>
+        </div>
+      )}
 
       {/* Search & Filters */}
       <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">

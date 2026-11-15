@@ -57,18 +57,25 @@ export const Visits: React.FC = () => {
   const [selectedRetailerName, setSelectedRetailerName] = useState('Sri Manjunatha Provision Store');
   const [customRetailerName, setCustomRetailerName] = useState('');
   const [retailerAddress, setRetailerAddress] = useState('4th Block, Jayanagar, Bengaluru');
-  const [repName, setRepName] = useState('Vikram Sharma');
+  const [repName, setRepName] = useState(user?.name || 'Vikram Sharma');
   const [visitType, setVisitType] = useState<'Regular Order' | 'Audit' | 'Collection' | 'New Lead Pitch'>('Audit');
   const [plannedTime, setPlannedTime] = useState('Today, 02:30 PM');
   const [visitNotes, setVisitNotes] = useState('');
 
+  const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+
   const visibleVisits = isRep
-    ? visitsList.filter(
-        (v) =>
-          v.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-          v.repName.toLowerCase().includes('vikram') ||
-          v.repId === user?.id ||
-          v.repId === 'rep-1'
+    ? (user?.email === 'vikram@fieldassist.io'
+        ? visitsList.filter(
+            (v) =>
+              v.repId === 'rep-1' ||
+              v.repName.toLowerCase().includes('vikram')
+          )
+        : visitsList.filter(
+            (v) =>
+              (user?.id && v.repId === user.id) ||
+              (user?.name && v.repName.toLowerCase() === user.name.toLowerCase())
+          )
       )
     : visitsList;
 
@@ -373,6 +380,29 @@ export const Visits: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {filteredVisits.length === 0 && (
+          <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-3xl">
+              📍
+            </div>
+            <div className="max-w-md space-y-1.5">
+              <h3 className="text-base font-bold text-white">No Field Visits Logged</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isNewRep
+                  ? `Welcome, ${user?.name || 'Representative'}! You have not logged any store visits yet. Start your daily beat in ${user?.territory || 'Bengaluru South'} by scheduling or checking into a retailer.`
+                  : 'No visits matched the current search criteria.'}
+              </p>
+            </div>
+            <button
+              onClick={() => setShowScheduleModal(true)}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Schedule First Visit</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Modal: Schedule Special Visit */}

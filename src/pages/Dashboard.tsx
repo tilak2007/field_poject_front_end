@@ -20,7 +20,8 @@ import {
   MapPin,
   Clock,
   Lock,
-  Building2,
+  Phone,
+  Plus,
 } from 'lucide-react';
 import {
   LineChart,
@@ -42,6 +43,7 @@ import {
   mockOrders,
   mockVisits,
   mockTargets,
+  mockRetailers,
 } from '../data/mockData';
 import { dashboardApi } from '../api';
 import { useAuth } from '../context/AuthContext';
@@ -60,6 +62,8 @@ export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
   const isRep = !isManagerOrAdmin;
+  const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+  const userTerritory = user?.territory || 'Bengaluru South';
 
   const [stats, setStats] = useState<DashboardStats>({
     today_orders_count: 6,
@@ -72,6 +76,45 @@ export const Dashboard: React.FC = () => {
   });
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Today shift telemetry for representative
+  const [userCheckedInToday, setUserCheckedInToday] = useState(false);
+  const [userPunchInTime, setUserPunchInTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const localRecord = localStorage.getItem(`attendance_${today}`);
+    if (localRecord) {
+      try {
+        const parsed = JSON.parse(localRecord);
+        if (parsed?.check_in_time) {
+          setUserCheckedInToday(true);
+          setUserPunchInTime(parsed.check_in_time);
+        }
+      } catch {}
+    }
+  }, []);
+
+  // Specified Area Retail Network: Load all retail outlets in the representative's assigned territory
+  const areaRetailers = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('fieldassist_retailers');
+      const list = stored ? JSON.parse(stored) : mockRetailers;
+      if (Array.isArray(list) && list.length > 0) {
+        const matched = list.filter((r: any) =>
+          r.territory?.toLowerCase().includes(userTerritory.toLowerCase()) ||
+          userTerritory.toLowerCase().includes(r.territory?.toLowerCase() || '')
+        );
+        if (matched.length > 0) return matched;
+      }
+    } catch {}
+
+    const matched = mockRetailers.filter((r) =>
+      r.territory?.toLowerCase().includes(userTerritory.toLowerCase()) ||
+      userTerritory.toLowerCase().includes(r.territory?.toLowerCase() || '')
+    );
+    return matched.length > 0 ? matched : mockRetailers.slice(0, 5);
+  }, [userTerritory]);
 
   // Dynamically load target assigned to the current Sales Rep
   // Newly created accounts do NOT have predefined targets!
@@ -127,77 +170,154 @@ export const Dashboard: React.FC = () => {
     ];
   }, [repAssignedTarget, user]);
 
-  // Beat Outlets in the Sales Rep's Allocated Area (Bengaluru South Beat A)
-  const repBeatOutlets = [
-    {
-      id: 'out-1',
-      name: 'Sri Manjunatha Provision Store',
-      area: '4th Block, Jayanagar, Bengaluru',
-      contact: 'Manjunath Gowda (+91 98112-44510)',
-      status: 'Completed',
-      orderAmount: 4500,
-      checkInTime: '09:45 AM',
-    },
-    {
-      id: 'out-2',
-      name: 'Shree Lakshmi Supermart',
-      area: '7th Phase, JP Nagar, Bengaluru',
-      contact: 'Lakshmi Narayana (+91 98711-22340)',
-      status: 'Completed',
-      orderAmount: 3500,
-      checkInTime: '11:15 AM',
-    },
-    {
-      id: 'out-3',
-      name: 'Venkateshwara Traders',
-      area: 'BTM Layout 2nd Stage, Bengaluru',
-      contact: 'R. Venkatesh (+91 99100-33211)',
-      status: 'In Progress',
+  // Retail Network Outlets in the Sales Rep's Specified Area
+  const repBeatOutlets = useMemo(() => {
+    if (user?.email === 'vikram@fieldassist.io') {
+      return [
+        {
+          id: 'out-1',
+          name: 'Sri Manjunatha Provision Store',
+          area: '4th Block, Jayanagar, Bengaluru',
+          contact: 'Manjunath Gowda (+91 98112-44510)',
+          status: 'Completed',
+          orderAmount: 4500,
+          checkInTime: '09:45 AM',
+          type: 'Kirana',
+          phone: '+91 98112-44510',
+          ownerName: 'Manjunath Gowda',
+        },
+        {
+          id: 'out-2',
+          name: 'Shree Lakshmi Supermart',
+          area: '7th Phase, JP Nagar, Bengaluru',
+          contact: 'Lakshmi Narayana (+91 98711-22340)',
+          status: 'Completed',
+          orderAmount: 3500,
+          checkInTime: '11:15 AM',
+          type: 'Supermarket',
+          phone: '+91 98711-22340',
+          ownerName: 'Lakshmi Narayana',
+        },
+        {
+          id: 'out-3',
+          name: 'Venkateshwara Traders',
+          area: 'BTM Layout 2nd Stage, Bengaluru',
+          contact: 'R. Venkatesh (+91 99100-33211)',
+          status: 'In Progress',
+          orderAmount: 0,
+          checkInTime: '01:20 PM',
+          type: 'Pharmacy',
+          phone: '+91 99100-33211',
+          ownerName: 'R. Venkatesh',
+        },
+        {
+          id: 'out-4',
+          name: 'Ganesh Grand Bazaar',
+          area: '5th Block, Koramangala, Bengaluru',
+          contact: 'Ganesh Hegde (+91 98188-77441)',
+          status: 'Scheduled',
+          orderAmount: 0,
+          checkInTime: '03:00 PM',
+          type: 'Supermarket',
+          phone: '+91 98188-77441',
+          ownerName: 'Ganesh Hegde',
+        },
+        {
+          id: 'out-5',
+          name: 'Balaji Daily Needs',
+          area: '2nd Stage, Banashankari, Bengaluru',
+          contact: 'Balaji Prasad (+91 98991-55223)',
+          status: 'Scheduled',
+          orderAmount: 0,
+          checkInTime: '04:30 PM',
+          type: 'Kirana',
+          phone: '+91 98991-55223',
+          ownerName: 'Balaji Prasad',
+        },
+      ];
+    }
+
+    // For any newly created representative: ONLY retail network details of their specified area
+    // All outlets start clean in "Ready for Visit" status with 0 orders pending first visit
+    return areaRetailers.map((ret, idx) => ({
+      id: ret.id || `out-${idx + 1}`,
+      name: ret.name,
+      area: `${ret.address}, ${ret.city || 'Bengaluru'}`,
+      contact: `${ret.ownerName} (${ret.phone})`,
+      status: 'Ready for Visit',
       orderAmount: 0,
-      checkInTime: '01:20 PM',
-    },
-    {
-      id: 'out-4',
-      name: 'Ganesh Grand Bazaar',
-      area: '5th Block, Koramangala, Bengaluru',
-      contact: 'Ganesh Hegde (+91 98188-77441)',
-      status: 'Scheduled',
-      orderAmount: 0,
-      checkInTime: '03:00 PM',
-    },
-    {
-      id: 'out-5',
-      name: 'Balaji Daily Needs',
-      area: '2nd Stage, Banashankari, Bengaluru',
-      contact: 'Balaji Prasad (+91 98991-55223)',
-      status: 'Scheduled',
-      orderAmount: 0,
-      checkInTime: '04:30 PM',
-    },
-  ];
+      checkInTime: 'Pending Visit',
+      type: ret.type || 'Retail Outlet',
+      phone: ret.phone,
+      ownerName: ret.ownerName,
+      creditLimit: ret.creditLimit,
+    }));
+  }, [user, areaRetailers]);
 
   // Strictly filter orders for sales rep: only their own bookings
-  const visibleOrders = isRep
-    ? mockOrders.filter(
+  const [ordersList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('fieldassist_orders');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return mockOrders;
+  });
+
+  const visibleOrders = useMemo(() => {
+    if (!isRep) return ordersList;
+    if (user?.email === 'vikram@fieldassist.io') {
+      return ordersList.filter(
         (o) =>
-          o.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-          o.repName.toLowerCase().includes('vikram') ||
-          o.repId === user?.id ||
           o.repId === 'rep-1' ||
-          o.repId === 'rep-01'
-      )
-    : mockOrders;
+          o.repId === 'rep-01' ||
+          o.repName?.toLowerCase().includes('vikram')
+      );
+    }
+    // Newly created representative: ONLY their own booked orders (zero by default!)
+    return ordersList.filter(
+      (o) =>
+        (user?.id && o.repId === user.id) ||
+        (user?.name && o.repName?.toLowerCase() === user.name.toLowerCase()) ||
+        (user?.email && o.repEmail === user.email)
+    );
+  }, [ordersList, isRep, user]);
 
   // Strictly filter visits for sales rep: only their own route visits
-  const visibleVisits = isRep
-    ? mockVisits.filter(
+  const [visitsList] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('fieldassist_visits');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return mockVisits;
+  });
+
+  const visibleVisits = useMemo(() => {
+    if (!isRep) return visitsList;
+    if (user?.email === 'vikram@fieldassist.io') {
+      return visitsList.filter(
         (v) =>
-          v.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-          v.repName.toLowerCase().includes('vikram') ||
-          v.repId === user?.id ||
-          v.repId === 'rep-1'
-      )
-    : mockVisits;
+          v.repId === 'rep-1' ||
+          v.repName?.toLowerCase().includes('vikram')
+      );
+    }
+    // Newly created representative: ONLY their own route visits (zero by default!)
+    return visitsList.filter(
+      (v) =>
+        (user?.id && v.repId === user.id) ||
+        (user?.name && v.repName?.toLowerCase() === user.name.toLowerCase())
+    );
+  }, [visitsList, isRep, user]);
+
+  // Orders total for today
+  const repTodayOrdersTotal = useMemo(() => {
+    if (!isNewRep) return 8000.0;
+    return visibleOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
+  }, [isNewRep, visibleOrders]);
+
+  const repTodayVisitsCount = useMemo(() => {
+    if (!isNewRep) return 4;
+    return visibleVisits.filter((v) => v.status === 'Completed').length;
+  }, [isNewRep, visibleVisits]);
 
   // Fetch daily analytics:
   const fetchDashboardStats = async () => {
@@ -210,7 +330,7 @@ export const Dashboard: React.FC = () => {
           setStats(liveStats);
           setToastMessage(
             isRep
-              ? 'Personal performance & beat synchronized with FieldAssist Backend!'
+              ? 'Personal territory retail network & beat synchronized!'
               : 'Live Executive Analytics synchronized with FieldAssist Backend!'
           );
           setTimeout(() => setToastMessage(null), 3500);
@@ -267,22 +387,21 @@ export const Dashboard: React.FC = () => {
       // Rep-isolated CSV report: strictly personal target, allocated area, and own bookings
       const csvRows = [
         ['FieldAssist FMCG - Sales Representative Performance Summary'],
-        ['Representative Name', user?.name || 'Vikram Sharma'],
-        ['Allocated Area / Beat', user?.territory || 'Bengaluru South Beat A'],
+        ['Representative Name', user?.name || 'Field Representative'],
+        ['Allocated Area / Beat', userTerritory],
         ['Role', 'Sales Representative'],
         ['Report Generated', new Date().toLocaleString()],
         [],
         ['Managerial Target Quota Policy', 'Monthly targets are assigned exclusively by Area Sales Management. Reps cannot allocate or edit targets.'],
-        ['Assigned Monthly Sales Target (INR)', '₹5,00,000'],
-        ['Actual Sales Achieved (INR)', '₹4,22,500'],
-        ['Target Fulfillment %', '84.5%'],
-        ['Remaining Target (INR)', '₹77,500'],
+        ['Assigned Monthly Sales Target (INR)', repAssignedTarget ? `₹${repAssignedTarget.salesTargetAmount}` : 'Not Assigned'],
+        ['Actual Sales Achieved (INR)', repAssignedTarget ? `₹${repAssignedTarget.salesAchievedAmount}` : '₹0'],
+        ['Target Fulfillment %', repAssignedTarget ? `${Math.round((repAssignedTarget.salesAchievedAmount / repAssignedTarget.salesTargetAmount) * 100)}%` : '0%'],
         [],
-        ['Today Orders Booked (INR)', '₹8,000.00'],
+        ['Today Orders Booked (INR)', `₹${repTodayOrdersTotal.toLocaleString('en-IN')}`],
         ['Today Orders Count', visibleOrders.length.toString()],
-        ['Today Field Visits Completed', '4 / 6 Outlets'],
+        ['Today Field Visits Completed', `${repTodayVisitsCount} / ${areaRetailers.length} Outlets`],
         [],
-        ['Allocated Beat Route Stores (Bengaluru South Beat A)'],
+        [`Allocated Area Retail Network Outlets (${userTerritory})`],
         ['Store Name', 'Location', 'Check-In Status', 'Order Booked (INR)'],
         ...repBeatOutlets.map((b) => [b.name, `"${b.area}"`, b.status, b.orderAmount]),
         [],
@@ -357,6 +476,43 @@ export const Dashboard: React.FC = () => {
         <div className="fixed bottom-6 right-6 z-50 p-4 rounded-2xl bg-emerald-950/90 border border-emerald-800 text-white shadow-2xl flex items-center gap-3 text-xs animate-in fade-in slide-in-from-bottom-3 duration-200">
           <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="font-semibold">{toastMessage}</span>
+        </div>
+      )}
+
+      {/* Welcome & New Beginning Greeting Banner for Newly Created Representatives */}
+      {isNewRep && (
+        <div className="relative overflow-hidden p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border border-emerald-500/40 shadow-2xl">
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/30 to-teal-500/20 border border-emerald-400/40 flex items-center justify-center text-3xl shadow-lg shrink-0">
+                🎉
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                    Welcome to FieldAssist, {user?.name || 'Representative'}!
+                  </h2>
+                  <span className="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-extrabold text-xs border border-emerald-500/40 flex items-center gap-1 shadow-sm">
+                    <span>🌱 Fresh Start & New Beginning</span>
+                  </span>
+                </div>
+                <p className="text-slate-300 text-xs sm:text-sm mt-1.5 leading-relaxed max-w-2xl">
+                  Wishing you great success on your journey as a Field Sales Representative! Your account has been freshly activated. All sales targets, visits, and order counters start at zero. Below are the verified <strong>retail network details</strong> for your assigned area: <strong className="text-white underline decoration-emerald-500">{userTerritory}</strong>. Explore your network, plan your beat visits, and begin booking orders!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 self-start md:self-auto">
+              <Link
+                to="/retailers"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer active:scale-95"
+              >
+                <Store className="w-4 h-4" />
+                <span>Explore Retail Network</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
         </div>
       )}
 
@@ -555,26 +711,26 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Rep KPI 2: My Allocated Area */}
+          {/* Rep KPI 2: My Allocated Area Retail Network */}
           <div className="glass-card glass-card-hover p-5 rounded-2xl space-y-3 relative overflow-hidden border border-indigo-500/30">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                My Allocated Area
+                Territory Retail Network
               </span>
               <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
-                <MapPin className="w-5 h-5" />
+                <Store className="w-5 h-5" />
               </div>
             </div>
             <div>
-              <div className="text-lg font-black text-white truncate" title={user?.territory || 'Bengaluru South Beat A'}>
-                {user?.territory || 'Bengaluru South Beat A'}
+              <div className="text-2xl font-black text-white truncate" title={userTerritory}>
+                {areaRetailers.length} Outlets
               </div>
               <div className="flex items-center gap-1.5 mt-1 text-indigo-400 text-xs font-semibold">
-                <Building2 className="w-3.5 h-3.5" />
-                <span>18 Retail Outlets in Beat</span>
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="truncate">{userTerritory}</span>
               </div>
               <div className="text-[10px] text-slate-400 mt-2">
-                Assigned Territory • South Zone (Bengaluru)
+                Assigned Retail Stores • South Zone
               </div>
             </div>
           </div>
@@ -590,16 +746,45 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="text-xl font-black text-emerald-400">
-                Active on Field
-              </div>
-              <div className="flex items-center gap-1.5 mt-1 text-slate-300 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                <span>Punch In: 09:15 AM</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-2">
-                Geofence Verified • 88% Battery
-              </div>
+              {userCheckedInToday ? (
+                <>
+                  <div className="text-xl font-black text-emerald-400">
+                    Active on Field
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-slate-300 text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Punch In: {userPunchInTime || '09:15 AM'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">
+                    Geofence Verified • GPS Active
+                  </div>
+                </>
+              ) : isNewRep ? (
+                <>
+                  <div className="text-xl font-black text-amber-400">
+                    Not Checked In
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-slate-400 text-xs font-semibold">
+                    <span>Shift: 09:30 AM – 06:30 PM</span>
+                  </div>
+                  <div className="text-[10px] text-brand-400 mt-2">
+                    <Link to="/attendance" className="underline hover:text-brand-300 font-semibold">Clock in to begin shift</Link>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-xl font-black text-emerald-400">
+                    Active on Field
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-slate-300 text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span>Punch In: 09:15 AM</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">
+                    Geofence Verified • 88% Battery
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -614,16 +799,33 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-white font-mono">
-                4 / 6 Stores
-              </div>
-              <div className="flex items-center gap-1.5 mt-1 text-purple-400 text-xs font-semibold">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>2 Stores Remaining</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-2">
-                Next: Ganesh Grand Bazaar
-              </div>
+              {isNewRep ? (
+                <>
+                  <div className="text-2xl font-black text-white font-mono">
+                    {repTodayVisitsCount} / {areaRetailers.length} Stores
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-purple-400 text-xs font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Ready for first visit</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">
+                    Territory Outlets Ready
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-black text-white font-mono">
+                    4 / 6 Stores
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-purple-400 text-xs font-semibold">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>2 Stores Remaining</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">
+                    Next: Ganesh Grand Bazaar
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -638,16 +840,33 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              <div className="text-2xl font-black text-white font-mono">
-                ₹8,000.00
-              </div>
-              <div className="flex items-center gap-1.5 mt-1 text-emerald-400 text-xs font-semibold">
-                <ArrowUpRight className="w-3.5 h-3.5" />
-                <span>{visibleOrders.length} Orders Booked</span>
-              </div>
-              <div className="text-[10px] text-slate-400 mt-2">
-                100% Synced with Backend
-              </div>
+              {isNewRep ? (
+                <>
+                  <div className="text-2xl font-black text-white font-mono">
+                    ₹{repTodayOrdersTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-slate-400 text-xs font-semibold">
+                    <Package className="w-3.5 h-3.5 text-amber-400" />
+                    <span>{visibleOrders.length} Orders Booked</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">
+                    Awaiting first store booking
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-2xl font-black text-white font-mono">
+                    ₹8,000.00
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1 text-emerald-400 text-xs font-semibold">
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                    <span>{visibleOrders.length} Orders Booked</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-2">
+                    100% Synced with Backend
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -845,20 +1064,20 @@ export const Dashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Rep's Allocated Area Beat Outlets & Daily Visit Checklist */}
+          {/* Rep's Allocated Area Retail Network Details & Daily Beat Outlets */}
           <div className="glass-panel p-6 rounded-2xl space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-emerald-400" />
-                  <span>My Allocated Area Beat Outlets</span>
+                  <Store className="w-4 h-4 text-emerald-400" />
+                  <span>Assigned Retail Network Details</span>
                 </h2>
                 <p className="text-xs text-slate-400">
-                  Assigned Route: {user?.territory || 'Bengaluru South Beat A'}
+                  Specified Area: <strong className="text-slate-200">{userTerritory}</strong>
                 </p>
               </div>
               <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-300 text-[11px] font-semibold border border-emerald-500/20">
-                5 Stores Today
+                {repBeatOutlets.length} Stores in Territory
               </span>
             </div>
 
@@ -866,19 +1085,30 @@ export const Dashboard: React.FC = () => {
               {repBeatOutlets.map((outlet, idx) => (
                 <div
                   key={outlet.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:bg-slate-800/60 transition-colors gap-3"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-6 h-6 rounded-lg bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center shrink-0">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
                       #{idx + 1}
                     </span>
                     <div className="min-w-0">
-                      <h3 className="text-xs font-bold text-white truncate">{outlet.name}</h3>
-                      <p className="text-[11px] text-slate-400 truncate">{outlet.area}</p>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xs font-bold text-white truncate">{outlet.name}</h3>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                          {outlet.type}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{outlet.area}</p>
+                      {outlet.contact && (
+                        <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Phone className="w-3 h-3 text-emerald-400" />
+                          <span>{outlet.contact}</span>
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
                     {outlet.orderAmount > 0 ? (
                       <div className="text-right">
                         <div className="text-xs font-bold text-emerald-400">
@@ -898,11 +1128,19 @@ export const Dashboard: React.FC = () => {
                           ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
                           : outlet.status === 'In Progress'
                           ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                          : outlet.status === 'Ready for Visit'
+                          ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/30'
                           : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
                       }`}
                     >
                       {outlet.status}
                     </span>
+                    <Link
+                      to={`/retailers/${outlet.id}`}
+                      className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-semibold border border-slate-700 transition-colors"
+                    >
+                      View
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -1081,44 +1319,65 @@ export const Dashboard: React.FC = () => {
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
-                  <th className="py-2.5 px-3">Order #</th>
-                  <th className="py-2.5 px-3">Retailer</th>
-                  {!isRep && <th className="py-2.5 px-3">Sales Rep</th>}
-                  <th className="py-2.5 px-3">Amount</th>
-                  <th className="py-2.5 px-3 text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 font-medium">
-                {visibleOrders.slice(0, 5).map((ord) => (
-                  <tr key={ord.id} className="hover:bg-slate-900/60 transition-colors">
-                    <td className="py-3 px-3 font-mono font-bold text-white">{ord.orderNumber}</td>
-                    <td className="py-3 px-3 text-slate-300 max-w-[140px] truncate">{ord.retailerName}</td>
-                    {!isRep && <td className="py-3 px-3 text-slate-400">{ord.repName}</td>}
-                    <td className="py-3 px-3 font-bold text-emerald-400">
-                      ₹{ord.totalAmount.toLocaleString('en-IN')}
-                    </td>
-                    <td className="py-3 px-3 text-right">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          ord.orderStatus === 'Approved'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                            : ord.orderStatus === 'Processing'
-                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
-                            : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-                        }`}
-                      >
-                        {ord.orderStatus}
-                      </span>
-                    </td>
+          {visibleOrders.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                    <th className="py-2.5 px-3">Order #</th>
+                    <th className="py-2.5 px-3">Retailer</th>
+                    {!isRep && <th className="py-2.5 px-3">Sales Rep</th>}
+                    <th className="py-2.5 px-3">Amount</th>
+                    <th className="py-2.5 px-3 text-right">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-800/60 font-medium">
+                  {visibleOrders.slice(0, 5).map((ord) => (
+                    <tr key={ord.id} className="hover:bg-slate-900/60 transition-colors">
+                      <td className="py-3 px-3 font-mono font-bold text-white">{ord.orderNumber}</td>
+                      <td className="py-3 px-3 text-slate-300 max-w-[140px] truncate">{ord.retailerName}</td>
+                      {!isRep && <td className="py-3 px-3 text-slate-400">{ord.repName}</td>}
+                      <td className="py-3 px-3 font-bold text-emerald-400">
+                        ₹{ord.totalAmount.toLocaleString('en-IN')}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            ord.orderStatus === 'Approved'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                              : ord.orderStatus === 'Processing'
+                              ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                              : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
+                          }`}
+                        >
+                          {ord.orderStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-8 text-center flex flex-col items-center justify-center space-y-3 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-xl">
+                🛒
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <h4 className="text-sm font-bold text-white">No Orders Placed Yet</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  You have not booked any orders yet. Visit stores in your assigned territory to start booking retailer orders.
+                </p>
+              </div>
+              <Link
+                to="/orders"
+                className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-brand-600/30"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Book First Order</span>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1134,7 +1393,7 @@ export const Dashboard: React.FC = () => {
             </h2>
             <p className="text-xs text-slate-400">
               {isRep
-                ? `Geofence verified check-ins and appointments for ${user?.territory || 'Bengaluru South Beat A'}`
+                ? `Geofence verified check-ins and appointments for ${userTerritory}`
                 : 'Geofence verified check-ins and outlet appointments'}
             </p>
           </div>
@@ -1147,56 +1406,77 @@ export const Dashboard: React.FC = () => {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
-                <th className="py-3 px-4">Visit Code</th>
-                <th className="py-3 px-4">Retailer Outlet</th>
-                {!isRep && <th className="py-3 px-4">Sales Rep</th>}
-                <th className="py-3 px-4">Check-In Time</th>
-                <th className="py-3 px-4">GPS Geofence</th>
-                <th className="py-3 px-4">Order Booked</th>
-                <th className="py-3 px-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium">
-              {visibleVisits.map((vis) => (
-                <tr key={vis.id} className="hover:bg-slate-900/60 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-brand-400">{vis.visitCode}</td>
-                  <td className="py-3.5 px-4 text-white font-bold">{vis.retailerName}</td>
-                  {!isRep && <td className="py-3.5 px-4 text-slate-300">{vis.repName}</td>}
-                  <td className="py-3.5 px-4 text-slate-400">{vis.actualCheckIn || vis.plannedTime}</td>
-                  <td className="py-3.5 px-4">
-                    {vis.geofenceVerified ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-                        <ShieldCheck className="w-4 h-4" /> Verified (50m)
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-[11px]">Pending</span>
-                    )}
-                  </td>
-                  <td className="py-3.5 px-4 font-bold text-emerald-400">
-                    {vis.orderBookedAmount > 0 ? `₹${vis.orderBookedAmount.toLocaleString('en-IN')}` : '—'}
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        vis.status === 'Completed'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : vis.status === 'In Progress'
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                      }`}
-                    >
-                      {vis.status}
-                    </span>
-                  </td>
+        {visibleVisits.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400 uppercase text-[10px] font-bold tracking-wider">
+                  <th className="py-3 px-4">Visit Code</th>
+                  <th className="py-3 px-4">Retailer Outlet</th>
+                  {!isRep && <th className="py-3 px-4">Sales Rep</th>}
+                  <th className="py-3 px-4">Check-In Time</th>
+                  <th className="py-3 px-4">GPS Geofence</th>
+                  <th className="py-3 px-4">Order Booked</th>
+                  <th className="py-3 px-4 text-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 font-medium">
+                {visibleVisits.map((vis) => (
+                  <tr key={vis.id} className="hover:bg-slate-900/60 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-brand-400">{vis.visitCode}</td>
+                    <td className="py-3.5 px-4 text-white font-bold">{vis.retailerName}</td>
+                    {!isRep && <td className="py-3.5 px-4 text-slate-300">{vis.repName}</td>}
+                    <td className="py-3.5 px-4 text-slate-400">{vis.actualCheckIn || vis.plannedTime}</td>
+                    <td className="py-3.5 px-4">
+                      {vis.geofenceVerified ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
+                          <ShieldCheck className="w-4 h-4" /> Verified (50m)
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">Pending</span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 font-bold text-emerald-400">
+                      {vis.orderBookedAmount > 0 ? `₹${vis.orderBookedAmount.toLocaleString('en-IN')}` : '—'}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          vis.status === 'Completed'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            : vis.status === 'In Progress'
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }`}
+                      >
+                        {vis.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-8 text-center flex flex-col items-center justify-center space-y-3 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl">
+              📍
+            </div>
+            <div className="space-y-1 max-w-sm">
+              <h4 className="text-sm font-bold text-white">No Field Visits Logged Yet</h4>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                You haven&apos;t conducted any store visits yet. Check in to your assigned retail network stores above with GPS to record your first visit.
+              </p>
+            </div>
+            <Link
+              to="/visits"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-600/30"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>Schedule First Visit</span>
+            </Link>
+          </div>
+        )}
       </div>
     </motion.div>
   );

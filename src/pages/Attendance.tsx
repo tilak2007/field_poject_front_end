@@ -241,12 +241,18 @@ export const Attendance: React.FC = () => {
 
   const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
   const isRep = !isManagerOrAdmin;
+  const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+
   const visibleAttendanceRecords = isRep
-    ? mockAttendanceRecords.filter(
-        (a) =>
-          a.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-          a.repId === user?.id ||
-          a.repId === 'rep-1'
+    ? (user?.email === 'vikram@fieldassist.io'
+        ? mockAttendanceRecords.filter(
+            (a) => a.repId === 'rep-1' || a.repName.toLowerCase().includes('vikram')
+          )
+        : mockAttendanceRecords.filter(
+            (a) =>
+              (user?.id && a.repId === user.id) ||
+              (user?.name && a.repName.toLowerCase() === user.name.toLowerCase())
+          )
       )
     : mockAttendanceRecords;
 
@@ -613,6 +619,18 @@ export const Attendance: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {!todayAttendance && visibleAttendanceRecords.length === 0 && (
+          <div className="p-8 text-center flex flex-col items-center justify-center space-y-2">
+            <Clock className="w-8 h-8 text-slate-500" />
+            <h4 className="text-sm font-bold text-white">No Past Attendance Records</h4>
+            <p className="text-xs text-slate-400 max-w-sm">
+              {isNewRep
+                ? `Welcome to FieldAssist, ${user?.name || 'Representative'}! Clock in above to register your first day shift telemetry with GPS coordinates.`
+                : 'No historical attendance records found for this period.'}
+            </p>
+          </div>
+        )}
       </div>
     </motion.div>
   );

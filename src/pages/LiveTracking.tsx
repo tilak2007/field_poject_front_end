@@ -189,11 +189,9 @@ export const LiveTracking: React.FC = () => {
   const isRep = user?.role === 'Sales Representative';
   // Sales Rep privacy isolation: a rep only tracks their own device and assigned beat
   const reps = isRep
-    ? allReps.filter(
-        (r) =>
-          r.name.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-          r.id === user?.id ||
-          r.id === 'rep-1'
+    ? (user?.email === 'vikram@fieldassist.io'
+        ? allReps.filter((r) => r.id === 'rep-1' || r.name.toLowerCase().includes('vikram'))
+        : allReps.filter((r) => (user?.id && r.id === user.id) || (user?.name && r.name.toLowerCase() === user.name.toLowerCase()))
       )
     : allReps;
   const geofencedOutlets = fleetData?.geofencedOutlets || [];

@@ -373,14 +373,22 @@ export const Orders: React.FC = () => {
     );
   };
 
+  const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+
   const visibleOrders = isRep
-    ? orders.filter(
-        (o) =>
-          o.repName.toLowerCase().includes((user?.name || 'vikram').toLowerCase()) ||
-          o.repName.toLowerCase().includes('vikram') ||
-          o.repId === user?.id ||
-          o.repId === 'rep-1' ||
-          o.repId === 'rep-01'
+    ? (user?.email === 'vikram@fieldassist.io'
+        ? orders.filter(
+            (o) =>
+              o.repId === 'rep-1' ||
+              o.repId === 'rep-01' ||
+              o.repName.toLowerCase().includes('vikram')
+          )
+        : orders.filter(
+            (o) =>
+              (user?.id && o.repId === user.id) ||
+              (user?.name && o.repName.toLowerCase() === user.name.toLowerCase()) ||
+              (user?.email && (o as any).repEmail === user.email)
+          )
       )
     : orders;
 
@@ -617,6 +625,29 @@ export const Orders: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {filteredOrders.length === 0 && (
+          <div className="p-12 text-center flex flex-col items-center justify-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-brand-500/10 border border-brand-500/20 text-brand-400 flex items-center justify-center text-3xl">
+              🛒
+            </div>
+            <div className="max-w-md space-y-1.5">
+              <h3 className="text-base font-bold text-white">No Orders Found</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                {isNewRep
+                  ? `Welcome, ${user?.name || 'Representative'}! As a new sales representative, you haven't booked any orders yet. Visit your territory retailers in ${user?.territory || 'Bengaluru South'} to place your first booking.`
+                  : 'No orders matched the current search and filter criteria.'}
+              </p>
+            </div>
+            <button
+              onClick={openOrderModal}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-brand-600/30"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Book New Order</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Book Manual Order Modal (Powered by create_order_atomic RPC) */}
