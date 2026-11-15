@@ -8,6 +8,7 @@ import { visitsApi } from './visitsApi';
 import { distributorsApi } from './distributorsApi';
 import { dashboardApi } from './dashboardApi';
 import { gpsApi } from './gpsApi';
+import { attendanceApi } from './attendanceApi';
 import { API_BASE_URL, USE_MOCK_API, apiFetch } from './client';
 import * as backendFoundation from '../integrations/supabase';
 
@@ -22,6 +23,7 @@ export * from './visitsApi';
 export * from './distributorsApi';
 export * from './dashboardApi';
 export * from './gpsApi';
+export * from './attendanceApi';
 export * from '../integrations/supabase';
 
 export const api = {
@@ -35,6 +37,7 @@ export const api = {
   distributors: distributorsApi,
   dashboard: dashboardApi,
   gps: gpsApi,
+  attendance: attendanceApi,
   backend: backendFoundation,
   fetch: apiFetch,
   config: {

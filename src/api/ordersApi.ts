@@ -22,6 +22,25 @@ function saveLocalOrders(list: Order[]): void {
   } catch {}
 }
 
+function mapRowToOrder(row: any): Order {
+  return {
+    id: row.id,
+    orderNumber: row.order_number || row.orderNumber || `ORD-${row.id?.slice(-4)}`,
+    retailerId: row.retailer_id || row.retailerId || 'ret-101',
+    retailerName: row.retailer_name || row.retailerName || 'Retail Outlet',
+    distributorId: row.distributor_id || row.distributorId || 'dist-1',
+    distributorName: row.distributor_name || row.distributorName || 'Apex FMCG Logistics Ltd',
+    repId: row.rep_id || row.repId || 'rep-1',
+    repName: row.rep_name || row.repName || 'Vikram Sharma',
+    date: row.date || (row.created_at ? row.created_at.split('T')[0] : new Date().toISOString().split('T')[0]),
+    items: Array.isArray(row.items) ? row.items : [],
+    totalAmount: Number(row.total_amount ?? row.totalAmount ?? 0),
+    paymentStatus: row.payment_status || row.paymentStatus || 'Pending',
+    orderStatus: row.order_status || row.orderStatus || 'Processing',
+    deliveryDateEstimated: row.delivery_date_estimated || row.deliveryDateEstimated || '2026-10-28',
+  };
+}
+
 export const ordersApi = {
   /**
    * GET /api/orders
@@ -60,8 +79,16 @@ export const ordersApi = {
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        saveLocalOrders(data as Order[]);
-        return data as Order[];
+        const mapped = data.map(mapRowToOrder);
+        const local = getLocalOrders();
+        // Merge Supabase orders with local mock/offline orders
+        const mapById = new Map<string, Order>();
+        for (const o of [...mapped, ...local]) {
+          if (!mapById.has(o.id)) mapById.set(o.id, o);
+        }
+        const merged = Array.from(mapById.values());
+        saveLocalOrders(merged);
+        return merged;
       }
     } catch (err) {
       // Supabase unavailable
@@ -114,20 +141,34 @@ export const ordersApi = {
 
     // 2. Try Supabase if configured
     try {
-      const payload = {
-        ...data,
+      const payload: Record<string, any> = {
         order_number: `ORD-BLR-${Date.now().toString().slice(-4)}`,
+        retailer_id: data.retailerId,
+        retailer_name: data.retailerName,
+        distributor_id: data.distributorId,
+        distributor_name: data.distributorName,
+        rep_id: data.repId,
+        rep_name: data.repName,
         date: new Date().toISOString().split('T')[0],
+        total_amount: Number(data.totalAmount) || 0,
+        payment_status: data.paymentStatus || 'Pending',
+        order_status: data.orderStatus || 'Processing',
+        delivery_date_estimated:
+          data.deliveryDateEstimated ||
+          new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0],
       };
 
       const { data: inserted, error } = await supabase.from('orders').insert([payload]).select().single();
       if (!error && inserted) {
-        const syncedOrder = { ...(inserted as Order), syncStatus: 'synced', synced: true };
+        const mapped = mapRowToOrder(inserted);
+        const syncedOrder = { ...mapped, items: data.items, syncStatus: 'synced', synced: true };
         const local = getLocalOrders();
         saveLocalOrders([syncedOrder, ...local]);
         return syncedOrder;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Supabase createOrder notice:', err);
+    }
 
     // 3. Fallback Local Persistence (Offline Mode Buffer)
     await simulateNetworkDelay(150);
@@ -173,40 +214,59 @@ export const ordersApi = {
         .select()
         .single();
       if (!error && updated) {
+        const mapped = mapRowToOrder(updated);
         const local = getLocalOrders();
-        saveLocalOrders(local.map((o) => (o.id === id ? (updated as Order) : o)));
-        return updated as Order;
+        saveLocalOrders(local.map((o) => (o.id === id ? mapped : o)));
+        return mapped;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Supabase updateOrderStatus notice:', err);
+    }
 
     // 3. Fallback Local
     await simulateNetworkDelay(100);
     const local = getLocalOrders();
     const index = local.findIndex((o) => o.id === id);
-    if (index === -1) throw { message: 'Order not found', status: 404 };
-    local[index].orderStatus = orderStatus;
-    saveLocalOrders(local);
-    return local[index];
+    if (index !== -1) {
+      const updated: Order = { ...local[index], orderStatus };
+      local[index] = updated;
+      saveLocalOrders(local);
+      return updated;
+    }
+
+    throw new Error(`Order with ID ${id} not found`);
   },
 
   /**
-   * DELETE /api/orders (Cancel Order & restore stock)
+   * Cancel an order
    */
   async cancelOrder(id: string): Promise<Order> {
-    try {
-      const res = await apiFetch<{ success: boolean; data: Order }>(`/orders?id=${encodeURIComponent(id)}`, {
-        method: 'DELETE',
-      });
-      if (res && res.data) {
-        const local = getLocalOrders();
-        const updated = local.map((o) => (o.id === id ? res.data : o));
-        saveLocalOrders(updated);
-        return res.data;
-      }
-    } catch (err) {
-      console.warn('Backend /api/orders DELETE notice:', err);
-    }
-
     return this.updateOrderStatus(id, 'Cancelled');
+  },
+
+  /**
+   * GET /api/orders/metrics
+   */
+  async getOrderMetrics(): Promise<{
+    totalOrdersToday: number;
+    pendingCount: number;
+    deliveredCount: number;
+    cancelledCount: number;
+    totalRevenueToday: number;
+  }> {
+    const orders = await this.getOrders();
+    const totalOrdersToday = orders.length;
+    const pendingCount = orders.filter((o) => o.orderStatus === 'Processing' || o.orderStatus === 'Approved').length;
+    const deliveredCount = orders.filter((o) => o.orderStatus === 'Delivered').length;
+    const cancelledCount = orders.filter((o) => o.orderStatus === 'Cancelled').length;
+    const totalRevenueToday = orders.reduce((sum, o) => sum + (o.orderStatus !== 'Cancelled' ? o.totalAmount : 0), 0);
+
+    return {
+      totalOrdersToday,
+      pendingCount,
+      deliveredCount,
+      cancelledCount,
+      totalRevenueToday,
+    };
   },
 };

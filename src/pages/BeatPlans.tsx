@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Plus, Map, LayoutGrid, X, CheckCircle2, Calendar, User, Navigation, Clock } from 'lucide-react';
 import { mockBeatPlans } from '../data/mockData';
 import { BeatPlanningMap } from '@/components/maps/BeatPlanningMap';
 import { useAuth } from '../context/AuthContext';
 import { isUnderManagerTerritory } from '../utils/territory';
+import { acquireLiveLocation } from '../utils/geolocation';
 import type { BeatPlan } from '../types';
 
 export const BeatPlans: React.FC = () => {
+  const { user } = useAuth();
+  const isManager = user?.role === 'Sales Manager';
+  const isRep = user?.role === 'Sales Representative';
+
   const [beatPlansList, setBeatPlansList] = useState<BeatPlan[]>(() => {
     const saved = localStorage.getItem('fieldassist_beat_plans');
     if (saved) {
@@ -21,23 +26,103 @@ export const BeatPlans: React.FC = () => {
     return mockBeatPlans;
   });
 
-  const { user } = useAuth();
-  const isManager = user?.role === 'Sales Manager';
-  const isRep = user?.role === 'Sales Representative';
+  // Acquire device's real live coordinates
+  const [userCoords, setUserCoords] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy?: number;
+    city?: string;
+  }>(() => {
+    try {
+      const saved = localStorage.getItem('fieldassist_user_coords');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number') {
+          return {
+            latitude: parsed.lat,
+            longitude: parsed.lng,
+            accuracy: parsed.accuracy || 20,
+            city: parsed.city || 'Bengaluru South',
+          };
+        }
+      }
+    } catch {}
+    return {
+      latitude: 12.9298,
+      longitude: 77.5832,
+      accuracy: 25,
+      city: 'Bengaluru South (Jayanagar 4th Block)',
+    };
+  });
+
+  useEffect(() => {
+    acquireLiveLocation(
+      (loc) => {
+        setUserCoords({
+          latitude: loc.lat,
+          longitude: loc.lng,
+          accuracy: loc.accuracy,
+          city: loc.city,
+        });
+      },
+      () => {}
+    );
+  }, []);
 
   // Territory governance: Sales Manager sees beats under their territory, Sales Rep sees their assigned beats
-  const visibleBeats = isRep
-    ? (user?.email === 'vikram@fieldassist.io'
-        ? beatPlansList.filter((b) => b.repName.toLowerCase().includes('vikram') || b.repId === 'rep-1')
-        : beatPlansList.filter((b) => (user?.name && b.repName.toLowerCase() === user.name.toLowerCase()) || (user?.id && b.repId === user.id))
-      )
-    : isManager
-    ? beatPlansList.filter((b) => isUnderManagerTerritory(user, { territory: b.territory }))
-    : beatPlansList;
+  const visibleBeats = useMemo(() => {
+    let list = beatPlansList;
+    if (isRep) {
+      const isVikram = user?.email === 'vikram@fieldassist.io' || user?.email === 'vikram.s@fieldassist.io';
+      let userBeats = isVikram
+        ? list.filter((b) => b.repName.toLowerCase().includes('vikram') || b.repId === 'rep-1')
+        : list.filter(
+            (b) =>
+              (user?.name && b.repName.toLowerCase() === user.name.toLowerCase()) ||
+              (user?.id && b.repId === user.id) ||
+              (user?.email && b.repId.includes(user.email.split('@')[0]))
+          );
+
+      // If a representative does not have an assigned beat yet, automatically synthesize their assigned beat route!
+      if (userBeats.length === 0 && user?.name) {
+        const synthesizedBeat: BeatPlan = {
+          id: `beat-assigned-${user.id || user.name.replace(/\s+/g, '-').toLowerCase()}`,
+          beatName: `${user.territory || 'Bengaluru South'} - Assigned Daily Beat Route`,
+          code: `BEAT-${(user.territory || 'BLR').slice(0, 3).toUpperCase()}-01`,
+          territory: user.territory || 'Bengaluru South',
+          repId: user.id || 'rep-my-id',
+          repName: user.name,
+          retailersCount: 16,
+          scheduledDay: 'Monday',
+          estimatedDistanceKm: 18.5,
+          estimatedVisitsDurationHours: 6.5,
+          completionPct: 25,
+          status: 'Active',
+        };
+        userBeats = [synthesizedBeat];
+      }
+      return userBeats;
+    }
+
+    if (isManager) {
+      return list.filter((b) => isUnderManagerTerritory(user, { territory: b.territory }));
+    }
+
+    return list;
+  }, [beatPlansList, isRep, isManager, user]);
 
   const [selectedBeatId, setSelectedBeatId] = useState<string>(() => {
     return visibleBeats[0]?.id || beatPlansList[0]?.id || 'beat-01';
   });
+
+  useEffect(() => {
+    if (visibleBeats.length > 0) {
+      if (!selectedBeatId || !visibleBeats.some((b) => b.id === selectedBeatId)) {
+        setSelectedBeatId(visibleBeats[0].id);
+      }
+    }
+  }, [visibleBeats, selectedBeatId]);
+
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -45,9 +130,11 @@ export const BeatPlans: React.FC = () => {
   // New Beat Form fields
   const [beatName, setBeatName] = useState('');
   const [beatCode, setBeatCode] = useState('');
-  const [repName, setRepName] = useState('Vikram Sharma');
-  const [territory, setTerritory] = useState('Bengaluru South');
-  const [scheduledDay, setScheduledDay] = useState<'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'>('Monday');
+  const [repName, setRepName] = useState(user?.name || 'Vikram Sharma');
+  const [territory, setTerritory] = useState(user?.territory || 'Bengaluru South');
+  const [scheduledDay, setScheduledDay] = useState<
+    'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday'
+  >('Monday');
   const [retailersCount, setRetailersCount] = useState(16);
   const [estimatedDistanceKm, setEstimatedDistanceKm] = useState(15.5);
   const [estimatedDurationHours, setEstimatedDurationHours] = useState(6.0);
@@ -56,6 +143,8 @@ export const BeatPlans: React.FC = () => {
     const nextNumber = beatPlansList.length + 1;
     setBeatCode(`BEAT-BLR-${String(nextNumber).padStart(2, '0')}`);
     setBeatName('');
+    setRepName(user?.name || 'Vikram Sharma');
+    setTerritory(user?.territory || 'Bengaluru South');
     setShowCreateModal(true);
   };
 
@@ -69,7 +158,7 @@ export const BeatPlans: React.FC = () => {
       beatName: finalName,
       code: finalCode,
       territory,
-      repId: `rep-${Date.now()}`,
+      repId: user?.id || `rep-${Date.now()}`,
       repName,
       retailersCount: Number(retailersCount) || 12,
       scheduledDay,
@@ -136,7 +225,7 @@ export const BeatPlans: React.FC = () => {
           <div className="flex items-center p-1 rounded-xl bg-slate-900 border border-slate-800 text-xs">
             <button
               onClick={() => setViewMode('map')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                 viewMode === 'map'
                   ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                   : 'text-slate-400 hover:text-white'
@@ -147,7 +236,7 @@ export const BeatPlans: React.FC = () => {
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                 viewMode === 'grid'
                   ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                   : 'text-slate-400 hover:text-white'
@@ -173,6 +262,9 @@ export const BeatPlans: React.FC = () => {
         <BeatPlanningMap
           selectedBeatId={selectedBeatId}
           onSelectBeat={(id) => setSelectedBeatId(id)}
+          beats={visibleBeats}
+          user={user}
+          userCoords={userCoords}
         />
       )}
 
@@ -293,7 +385,7 @@ export const BeatPlans: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                  className="p-1 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -308,7 +400,7 @@ export const BeatPlans: React.FC = () => {
                       required
                       value={beatName}
                       onChange={(e) => setBeatName(e.target.value)}
-                      placeholder="e.g. Connaught Place & Barakhamba Loop"
+                      placeholder="e.g. Jayanagar & JP Nagar Retail Loop"
                       className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-brand-500"
                     />
                   </div>
@@ -320,7 +412,7 @@ export const BeatPlans: React.FC = () => {
                       required
                       value={beatCode}
                       onChange={(e) => setBeatCode(e.target.value)}
-                      placeholder="BEAT-DEL-05"
+                      placeholder="BEAT-BLR-05"
                       className="w-full h-10 px-3.5 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-brand-500"
                     />
                   </div>
@@ -330,17 +422,13 @@ export const BeatPlans: React.FC = () => {
                       <User className="w-3.5 h-3.5 text-brand-400" />
                       <span>Assigned Rep *</span>
                     </label>
-                    <select
+                    <input
+                      type="text"
+                      required
                       value={repName}
                       onChange={(e) => setRepName(e.target.value)}
                       className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
-                    >
-                      <option value="Vikram Sharma">Vikram Sharma (Bengaluru South)</option>
-                      <option value="Ananya Verma">Ananya Verma (Bengaluru Central)</option>
-                      <option value="Rahul Deshmukh">Rahul Deshmukh (Bengaluru East)</option>
-                      <option value="Priya Patel">Priya Patel (Bengaluru West)</option>
-                      <option value="Amit Singh">Amit Singh (Bengaluru North)</option>
-                    </select>
+                    />
                   </div>
 
                   <div className="space-y-1.5">
@@ -351,7 +439,7 @@ export const BeatPlans: React.FC = () => {
                     <select
                       value={scheduledDay}
                       onChange={(e) => setScheduledDay(e.target.value as any)}
-                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500 cursor-pointer"
                     >
                       <option value="Monday">Monday</option>
                       <option value="Tuesday">Tuesday</option>
@@ -367,13 +455,16 @@ export const BeatPlans: React.FC = () => {
                     <select
                       value={territory}
                       onChange={(e) => setTerritory(e.target.value)}
-                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500"
+                      className="w-full h-10 px-3 text-xs bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-brand-500 cursor-pointer"
                     >
                       <option value="Bengaluru South">Bengaluru South</option>
                       <option value="Bengaluru Central">Bengaluru Central</option>
                       <option value="Bengaluru East">Bengaluru East</option>
                       <option value="Bengaluru West">Bengaluru West</option>
                       <option value="Bengaluru North">Bengaluru North</option>
+                      <option value="Mumbai South">Mumbai South</option>
+                      <option value="Delhi NCR">Delhi NCR</option>
+                      <option value="Kolkata Central">Kolkata Central</option>
                     </select>
                   </div>
 
@@ -425,13 +516,13 @@ export const BeatPlans: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors"
+                    className="px-4 py-2.5 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-lg shadow-brand-600/30 transition-all flex items-center gap-2 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Save & Deploy Beat Plan</span>

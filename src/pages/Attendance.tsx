@@ -14,52 +14,21 @@ import {
   ShieldCheck,
   RotateCcw,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
-import { mockAttendanceRecords } from '../data/mockData';
+import { attendanceApi, type AttendanceRecord, type AttendanceHistoryItem } from '../api/attendanceApi';
 import { useAuth } from '../context/AuthContext';
 import { exportToCsv } from '../utils/exportCsv';
 import { acquireLiveLocation, type GeoLocationResult } from '../utils/geolocation';
 import { isUnderManagerTerritory } from '../utils/territory';
 
-export interface AttendanceRecord {
-  id?: string;
-  repId?: string;
-  repName?: string;
-  work_date: string;
-  check_in_time?: string | null;
-  check_out_time?: string | null;
-  latitude?: number | null;
-  longitude?: number | null;
-  notes?: string | null;
-  status?: string;
-  working_hours?: number | null;
-  location_name?: string | null;
-}
-
-export interface AttendanceHistoryItem {
-  id: string;
-  repId: string;
-  repName: string;
-  date: string;
-  checkInTime: string;
-  checkOutTime?: string;
-  status: 'Present' | 'Late' | 'Half Day' | 'Absent' | 'Completed';
-  startLocation: string;
-  endLocation?: string;
-  workingHours: number;
-  batteryPctAtCheckIn: number;
-  geofenceVerified: boolean;
-}
-
 export const Attendance: React.FC = () => {
   const { user } = useAuth();
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const userKey = useMemo(() => {
-    return user?.id || (user?.email ? user.email.replace(/[^a-zA-Z0-9]/g, '_') : 'usr_default');
-  }, [user]);
 
-  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  // Synchronous cache read so there is ZERO delay or flash of "Check In" button
+  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(() => {
+    return attendanceApi.getCachedTodayAttendance(user);
+  });
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -98,69 +67,32 @@ export const Attendance: React.FC = () => {
   });
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
-  // Attendance History records (persistent across sessions)
-  const [historyList, setHistoryList] = useState<AttendanceHistoryItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('fieldassist_attendance_history');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return mockAttendanceRecords as AttendanceHistoryItem[];
-  });
+  // Attendance History records
+  const [historyList, setHistoryList] = useState<AttendanceHistoryItem[]>([]);
 
-  // 1. Fetch today's attendance for current logged-in user
-  const fetchTodayAttendance = async () => {
+  // 1. Fetch today's attendance and history
+  const loadAttendanceData = async () => {
     setIsLoading(true);
     try {
-      // Check user-scoped localStorage key first
-      const userScopedKey = `fieldassist_attendance_${userKey}_${today}`;
-      const savedUserRecord = localStorage.getItem(userScopedKey);
-      if (savedUserRecord) {
-        try {
-          const parsed = JSON.parse(savedUserRecord);
-          setTodayAttendance(parsed);
-          setIsLoading(false);
-          return;
-        } catch {}
+      // First ensure synchronous cache is loaded
+      const cached = attendanceApi.getCachedTodayAttendance(user);
+      if (cached) {
+        setTodayAttendance(cached);
       }
 
-      // Check generic key if user-scoped key not found
-      const genericRecord = localStorage.getItem(`attendance_${today}`);
-      if (genericRecord) {
-        try {
-          const parsed = JSON.parse(genericRecord);
-          if (!parsed.repId || parsed.repId === user?.id || parsed.repName === user?.name) {
-            setTodayAttendance(parsed);
-            setIsLoading(false);
-            return;
-          }
-        } catch {}
+      // Fetch verified record from Supabase
+      const verified = await attendanceApi.getTodayAttendance(user);
+      if (verified) {
+        setTodayAttendance(verified);
+      } else if (!cached) {
+        setTodayAttendance(null);
       }
 
-      // Check Supabase if configured
-      try {
-        const { data, error } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('work_date', today)
-          .maybeSingle();
-
-        if (!error && data) {
-          setTodayAttendance(data as AttendanceRecord);
-          localStorage.setItem(userScopedKey, JSON.stringify(data));
-          setIsLoading(false);
-          return;
-        }
-      } catch (sbErr) {
-        console.warn('Supabase attendance check notice:', sbErr);
-      }
-
-      setTodayAttendance(null);
+      // Fetch history records (scoped by role & territory)
+      const hist = await attendanceApi.getAttendanceHistory(user);
+      setHistoryList(hist);
     } catch (err) {
-      console.warn('Attendance load error:', err);
-      setTodayAttendance(null);
+      console.warn('Attendance load warning:', err);
     } finally {
       setIsLoading(false);
     }
@@ -198,76 +130,34 @@ export const Attendance: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTodayAttendance();
+    loadAttendanceData();
     detectLocation();
-  }, [userKey]);
+  }, [user]);
 
   // 3. Punch In (Start Shift)
   const handleCheckIn = async () => {
+    if (!user) return;
     setIsSubmitting(true);
     setFeedback(null);
-    const nowIso = new Date().toISOString();
     const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const locationDisplay = coords.city || `${user?.territory || 'Bengaluru South'} (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`;
+    const locationDisplay =
+      coords.city ||
+      `${user?.territory || 'Bengaluru South'} (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`;
 
     try {
-      // 1. Supabase sync attempt
-      try {
-        await supabase.rpc('check_in_rep', {
-          _latitude: coords.latitude,
-          _longitude: coords.longitude,
-          _notes: checkInNotes,
-        });
-      } catch {}
-
-      const newRecord: AttendanceRecord = {
-        id: `att-${Date.now()}`,
-        repId: user?.id || 'rep-my-device',
-        repName: user?.name || 'Sales Representative',
-        work_date: today,
-        check_in_time: nowIso,
+      const rec = await attendanceApi.checkIn({
+        user,
         latitude: coords.latitude,
         longitude: coords.longitude,
-        location_name: locationDisplay,
+        locationName: locationDisplay,
         notes: checkInNotes,
-        status: 'Present',
-        working_hours: 0,
-      };
-
-      try {
-        await supabase.from('attendance').upsert([newRecord]);
-      } catch {}
-
-      // 2. User-scoped persistent storage
-      const userScopedKey = `fieldassist_attendance_${userKey}_${today}`;
-      localStorage.setItem(userScopedKey, JSON.stringify(newRecord));
-      localStorage.setItem(`attendance_${today}`, JSON.stringify(newRecord));
-
-      // 3. Add to Attendance History Table
-      const newHistoryItem: AttendanceHistoryItem = {
-        id: `att-hist-${Date.now()}`,
-        repId: user?.id || 'rep-1',
-        repName: user?.name || 'Vikram Sharma',
-        date: today,
-        checkInTime: timeFormatted,
-        checkOutTime: undefined,
-        status: 'Present',
-        startLocation: locationDisplay,
-        workingHours: 0,
-        batteryPctAtCheckIn: 92,
-        geofenceVerified: true,
-      };
-
-      setHistoryList((prev) => {
-        const filtered = prev.filter((p) => !(p.date === today && (p.repName === (user?.name || '') || p.repId === user?.id)));
-        const updated = [newHistoryItem, ...filtered];
-        try {
-          localStorage.setItem('fieldassist_attendance_history', JSON.stringify(updated));
-        } catch {}
-        return updated;
       });
 
-      setTodayAttendance(newRecord);
+      setTodayAttendance(rec);
+
+      const updatedHistory = await attendanceApi.getAttendanceHistory(user);
+      setHistoryList(updatedHistory);
+
       setFeedback({
         type: 'success',
         message: `✅ Shift punched in successfully at ${timeFormatted} in ${locationDisplay}. Have a safe and productive day!`,
@@ -284,73 +174,27 @@ export const Attendance: React.FC = () => {
 
   // 4. Punch Out (End Shift)
   const handleCheckOut = async () => {
+    if (!user || !todayAttendance) return;
     setIsSubmitting(true);
     setFeedback(null);
-    const nowIso = new Date().toISOString();
     const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     try {
-      try {
-        await supabase.rpc('check_out_rep', {
-          _notes: checkOutNotes,
-        });
-      } catch {}
-
-      const checkInDate = todayAttendance?.check_in_time ? new Date(todayAttendance.check_in_time) : new Date();
-      const diffHours = Math.max(
-        0.1,
-        Number(((new Date().getTime() - checkInDate.getTime()) / (1000 * 60 * 60)).toFixed(1))
-      );
-
-      const updatedRecord: AttendanceRecord = {
-        ...(todayAttendance || { work_date: today }),
-        work_date: today,
-        check_out_time: nowIso,
-        notes: `${todayAttendance?.notes || 'Morning shift check-in'} | ${checkOutNotes}`,
-        status: 'Completed',
-        working_hours: diffHours,
-      };
-
-      try {
-        await supabase
-          .from('attendance')
-          .update({
-            check_out_time: nowIso,
-            notes: updatedRecord.notes,
-            status: 'Completed',
-            working_hours: diffHours,
-          })
-          .eq('work_date', today);
-      } catch {}
-
-      const userScopedKey = `fieldassist_attendance_${userKey}_${today}`;
-      localStorage.setItem(userScopedKey, JSON.stringify(updatedRecord));
-      localStorage.setItem(`attendance_${today}`, JSON.stringify(updatedRecord));
-
-      // Update Attendance History Table
-      setHistoryList((prev) => {
-        const updated = prev.map((item) => {
-          if (item.date === today && (item.repName === user?.name || item.repId === user?.id)) {
-            return {
-              ...item,
-              checkOutTime: timeFormatted,
-              workingHours: diffHours,
-              status: 'Completed' as const,
-              endLocation: coords.city || user?.territory || 'Bengaluru South Depot',
-            };
-          }
-          return item;
-        });
-        try {
-          localStorage.setItem('fieldassist_attendance_history', JSON.stringify(updated));
-        } catch {}
-        return updated;
+      const rec = await attendanceApi.checkOut({
+        user,
+        todayAttendance,
+        notes: checkOutNotes,
+        endLocation: coords.city,
       });
 
-      setTodayAttendance(updatedRecord);
+      setTodayAttendance(rec);
+
+      const updatedHistory = await attendanceApi.getAttendanceHistory(user);
+      setHistoryList(updatedHistory);
+
       setFeedback({
         type: 'success',
-        message: `🏁 Shift closed at ${timeFormatted}. Total working duration logged: ${diffHours} hours.`,
+        message: `🏁 Shift closed at ${timeFormatted}. Total working duration logged: ${rec.working_hours} hours.`,
       });
     } catch (err: any) {
       setFeedback({
@@ -363,14 +207,14 @@ export const Attendance: React.FC = () => {
   };
 
   // 5. Reset Today's Punch (For testing / demonstration)
-  const handleResetTodayPunch = () => {
-    const userScopedKey = `fieldassist_attendance_${userKey}_${today}`;
-    localStorage.removeItem(userScopedKey);
-    localStorage.removeItem(`attendance_${today}`);
+  const handleResetTodayPunch = async () => {
+    await attendanceApi.resetTodayPunch(user);
     setTodayAttendance(null);
+    const updatedHistory = await attendanceApi.getAttendanceHistory(user);
+    setHistoryList(updatedHistory);
     setFeedback({
       type: 'success',
-      message: 'Today\'s attendance shift has been reset. You can now test punching in again.',
+      message: "Today's shift record has been reset. You can now test punching in again.",
     });
     setTimeout(() => setFeedback(null), 3500);
   };
@@ -382,15 +226,14 @@ export const Attendance: React.FC = () => {
   const isRep = !isManagerOrAdmin;
   const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
 
-  // Role & Territory Governed Attendance Logs:
-  // - Sales Rep: Strictly their own shift logs
-  // - Sales Manager: Reps within their assigned operating territory (e.g. Bengaluru)
-  // - System Admin: Nationwide All-India logs
+  // Visible records with strict role & territory filtering
   const visibleAttendanceRecords = useMemo(() => {
     if (isRep) {
+      const myRepId = attendanceApi.resolveRepId(user);
       return historyList.filter(
         (a) =>
           (user?.email === 'vikram@fieldassist.io' && (a.repId === 'rep-1' || a.repName.toLowerCase().includes('vikram'))) ||
+          a.repId === myRepId ||
           (user?.id && a.repId === user.id) ||
           (user?.name && a.repName.toLowerCase() === user.name.toLowerCase())
       );
@@ -398,17 +241,16 @@ export const Attendance: React.FC = () => {
 
     if (user?.role === 'Sales Manager') {
       return historyList.filter((a) => {
-        const repInfo = {
-          territory:
-            a.startLocation.toLowerCase().includes('mumbai') || a.repName.toLowerCase().includes('rohit')
-              ? 'Mumbai South'
-              : a.startLocation.toLowerCase().includes('kolkata') || a.repName.toLowerCase().includes('amitabh')
-              ? 'Kolkata Central'
-              : a.startLocation.toLowerCase().includes('delhi') || a.repName.toLowerCase().includes('suresh')
-              ? 'Delhi NCR'
-              : 'Bengaluru South',
-        };
-        return isUnderManagerTerritory(user, repInfo);
+        const territory =
+          a.territory ||
+          (a.startLocation.toLowerCase().includes('mumbai') || a.repName.toLowerCase().includes('rohit')
+            ? 'Mumbai South'
+            : a.startLocation.toLowerCase().includes('kolkata') || a.repName.toLowerCase().includes('amitabh')
+            ? 'Kolkata Central'
+            : a.startLocation.toLowerCase().includes('delhi') || a.repName.toLowerCase().includes('suresh')
+            ? 'Delhi NCR'
+            : 'Bengaluru South');
+        return isUnderManagerTerritory(user, { territory });
       });
     }
 
@@ -436,7 +278,7 @@ export const Attendance: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={fetchTodayAttendance}
+            onClick={loadAttendanceData}
             disabled={isLoading}
             className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
           >
@@ -704,13 +546,19 @@ export const Attendance: React.FC = () => {
                   Punch In:{' '}
                   <span className="font-mono text-emerald-400 font-bold">
                     {todayAttendance?.check_in_time
-                      ? new Date(todayAttendance.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      ? new Date(todayAttendance.check_in_time).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
                       : '09:00 AM'}
                   </span>{' '}
                   • Punch Out:{' '}
                   <span className="font-mono text-emerald-400 font-bold">
                     {todayAttendance?.check_out_time
-                      ? new Date(todayAttendance.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      ? new Date(todayAttendance.check_out_time).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
                       : '06:00 PM'}
                   </span>
                 </p>
@@ -833,7 +681,7 @@ export const Attendance: React.FC = () => {
                 <tr key={att.id} className="hover:bg-slate-900/60 transition-colors">
                   <td className="py-4 px-4 font-bold text-white text-sm flex items-center gap-1.5">
                     <span>{att.repName}</span>
-                    {att.date === today && (att.repName === user?.name || att.repId === user?.id) && (
+                    {att.date === today && (att.repName === user?.name || att.repId === user?.id || att.repId === attendanceApi.resolveRepId(user)) && (
                       <span className="px-1.5 py-0.5 rounded bg-brand-500/20 text-brand-300 text-[9px] font-bold font-mono">
                         TODAY
                       </span>

@@ -12,10 +12,11 @@ export const getSupabaseConfig = () => {
     // Ignore storage restrictions
   }
 
-  const envUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const envUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_SUPABASE_URL) || '';
   const envKey =
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    (typeof import.meta !== 'undefined' &&
+      ((import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY ||
+        (import.meta as any).env?.VITE_SUPABASE_ANON_KEY)) ||
     '';
 
   const finalUrl = storedUrl || envUrl || 'https://ibzycpftqmngcrmgpsed.supabase.co';
