@@ -8,9 +8,11 @@ import {
   Maximize2,
   Store,
   Package,
+  RotateCcw,
 } from 'lucide-react';
 import type { Product } from '../../types';
 import { acquireLiveLocation, type GeoLocationResult } from '../../utils/geolocation';
+import { createRobustTileLayer, type MapStyleType } from '../../utils/mapTiles';
 
 interface ProductStockMapProps {
   products: Product[];
@@ -18,8 +20,6 @@ interface ProductStockMapProps {
   onSelectProduct?: (sku: string) => void;
   className?: string;
 }
-
-type MapLayerType = 'streets' | 'satellite' | 'terrain' | 'dark';
 
 interface OutletStockInfo {
   id: string;
@@ -104,21 +104,6 @@ const generateOutletsNear = (
   });
 };
 
-// 100% Free Tile Layer URLs (NO API KEY, NO WATERMARK)
-const getTileUrl = (type: MapLayerType) => {
-  switch (type) {
-    case 'satellite':
-      return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-    case 'terrain':
-      return 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
-    case 'dark':
-    case 'streets':
-    default:
-      // Free OpenStreetMap Standard
-      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-  }
-};
-
 export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   products,
   selectedSku,
@@ -132,7 +117,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   const userAccuracyCircleRef = useRef<L.Circle | null>(null);
   const outletMarkersRef = useRef<L.Marker[]>([]);
 
-  const [mapLayer, setMapLayer] = useState<MapLayerType>('streets');
+  const [mapLayer, setMapLayer] = useState<MapStyleType>('streets');
   const [userCoords, setUserCoords] = useState<{
     lat: number;
     lng: number;
@@ -183,12 +168,14 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     return Number((R * c).toFixed(1));
   };
 
-  // 1. Initialize Map
+  // 1. Initialize Map with Enterprise CDN
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
 
-    const defaultCenter: [number, number] = [28.6139, 77.209];
+    const defaultCenter: [number, number] = userCoords
+      ? [userCoords.lat, userCoords.lng]
+      : [12.9298, 77.5832];
     const map = L.map(mapContainerRef.current, {
       center: defaultCenter,
       zoom: 13,
@@ -196,28 +183,29 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
       attributionControl: false,
     });
 
-    const tileLayer = L.tileLayer(getTileUrl('streets'), {
-      maxZoom: 19,
-      subdomains: 'abc',
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-    }).addTo(map);
-
+    const tileLayer = createRobustTileLayer('streets').addTo(map);
     tileLayerRef.current = tileLayer;
     mapInstanceRef.current = map;
 
     // Immediately trigger invalidateSize on intervals to guarantee full tile coverage
-    const timer1 = setTimeout(() => {
-      map.invalidateSize();
-    }, 150);
-    const timer2 = setTimeout(() => {
-      map.invalidateSize();
-    }, 600);
+    const invalidate = () => {
+      try {
+        map.invalidateSize();
+      } catch {}
+    };
+
+    const timer1 = setTimeout(invalidate, 100);
+    const timer2 = setTimeout(invalidate, 400);
+    const timer3 = setTimeout(invalidate, 1200);
+
+    const handleResize = () => invalidate();
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleResize);
 
     let resizeObserver: ResizeObserver | null = null;
     if (mapContainerRef.current) {
       resizeObserver = new ResizeObserver(() => {
-        map.invalidateSize();
+        invalidate();
       });
       resizeObserver.observe(mapContainerRef.current);
     }
@@ -228,27 +216,26 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleResize);
       resizeObserver?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // 2. Tile Layer & Filter Handling
+  // 2. Tile Layer & Filter Handling with Enterprise-Grade Providers
   useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    tileLayerRef.current.setUrl(getTileUrl(mapLayer));
-
-    const container = tileLayerRef.current.getContainer();
-    if (container) {
-      if (mapLayer === 'dark') {
-        container.style.filter =
-          'invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%)';
-      } else {
-        container.style.filter = 'none';
-      }
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      tileLayerRef.current.remove();
     }
-    mapInstanceRef.current.invalidateSize();
+    const newLayer = createRobustTileLayer(mapLayer);
+    newLayer.addTo(map);
+    tileLayerRef.current = newLayer;
+    map.invalidateSize();
   }, [mapLayer]);
 
   // Acquire Real Live Location via browser GPS + IP fallback
@@ -476,6 +463,16 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     }
   };
 
+  const handleRefreshMap = () => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.invalidateSize();
+    if (userCoords) {
+      mapInstanceRef.current.flyTo([userCoords.lat, userCoords.lng], 14, { duration: 0.8 });
+    } else {
+      acquireRealLocation();
+    }
+  };
+
   const selectedProductObj =
     products.find((p) => p.sku === activeSku) || products[0];
 
@@ -642,6 +639,13 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
           >
             <Maximize2 className="w-4 h-4" />
           </button>
+          <button
+            onClick={handleRefreshMap}
+            title="Force Refresh & Re-align Map Tiles"
+            className="p-2.5 bg-slate-900/90 backdrop-blur-md text-emerald-400 hover:text-white hover:bg-emerald-600 border border-slate-700/80 rounded-xl shadow-lg transition-all cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Attribution & Status Badge */}
@@ -650,17 +654,8 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
             <span>{locationStatus}</span>
           </div>
 
-          <div className="bg-slate-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-800 text-[10px] text-slate-400">
-            <span>Map tiles © </span>
-            <a
-              href="https://www.openstreetmap.org/copyright"
-              target="_blank"
-              rel="noreferrer"
-              className="text-slate-300 hover:underline"
-            >
-              OpenStreetMap
-            </a>
-            <span> contributors (Free API)</span>
+          <div className="bg-slate-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-800 text-[10px] text-emerald-400 font-semibold">
+            <span>📡 Live CDN: CartoDB / Fastly Edge • 100% Free & Unlimited</span>
           </div>
         </div>
       </div>

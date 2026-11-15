@@ -53,19 +53,18 @@
 .leaflet-container {
   width: 100% !important;
   height: 100% !important;
-  min-height: 480px;
   background-color: #0f172a !important;
-  z-index: 10;
+  font-family: inherit;
 }
 .leaflet-tile {
   visibility: inherit !important;
 }
-.leaflet-pane {
-  z-index: 400 !important;
-}
 .leaflet-top,
 .leaflet-bottom {
-  z-index: 1000 !important;
+  z-index: 999 !important;
+}
+.leaflet-control-container {
+  z-index: 999 !important;
 }
 
 /* Radar Animation */

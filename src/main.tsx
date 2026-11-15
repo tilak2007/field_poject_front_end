@@ -2,7 +2,12 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import 'leaflet/dist/leaflet.css';
+import { fixLeafletDefaultIcons } from './utils/mapTiles';
 import { initOfflineSyncListeners } from './utils/offlineSync';
+
+// Fix Vite Leaflet marker icon asset paths
+fixLeafletDefaultIcons();
 
 // Initialize automatic background sync when returning online
 initOfflineSyncListeners();

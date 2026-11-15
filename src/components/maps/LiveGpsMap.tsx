@@ -8,9 +8,11 @@ import {
   Maximize2,
   Radio,
   Compass,
+  RotateCcw,
 } from 'lucide-react';
 import type { RepLiveTelemetry, GeofencedOutlet } from '../../api/gpsApi';
 import { acquireLiveLocation, type GeoLocationResult } from '../../utils/geolocation';
+import { createRobustTileLayer } from '../../utils/mapTiles';
 
 export interface LiveGpsMapProps {
   reps: RepLiveTelemetry[];
@@ -50,24 +52,9 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   const [autoFollow, setAutoFollow] = useState(true);
   const [internalLocating, setInternalLocating] = useState(false);
   const [hasInitialCentered, setHasInitialCentered] = useState(false);
-  const [liveGpsLabel, setLiveGpsLabel] = useState<string>('Free Map API Active');
+  const [liveGpsLabel, setLiveGpsLabel] = useState<string>('📡 Live CDN: CartoDB / Fastly Edge (100% Free • Unlimited)');
 
-  // 100% Free Tile Layers (NO API KEY REQUIRED, NO WATERMARKS)
-  const getTileUrl = (type: MapLayerType) => {
-    switch (type) {
-      case 'satellite':
-        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      case 'humanitarian':
-        return 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
-      case 'dark':
-      case 'streets':
-      default:
-        // OpenStreetMap Standard - 100% Free Public Map Server
-        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-    }
-  };
-
-  // 1. Initialize Leaflet Map
+  // 1. Initialize Leaflet Map with Enterprise-Grade CDN
   useEffect(() => {
     if (!mapContainerRef.current) return;
     if (mapInstanceRef.current) return;
@@ -87,28 +74,29 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
       attributionControl: false,
     });
 
-    const tileLayer = L.tileLayer(getTileUrl('streets'), {
-      maxZoom: 19,
-      subdomains: 'abc',
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-    }).addTo(map);
-
+    const tileLayer = createRobustTileLayer('streets').addTo(map);
     tileLayerRef.current = tileLayer;
     mapInstanceRef.current = map;
 
-    // Fix container size on mount to prevent gray/blank screen
-    const timer1 = setTimeout(() => {
-      map.invalidateSize();
-    }, 150);
-    const timer2 = setTimeout(() => {
-      map.invalidateSize();
-    }, 600);
+    // Fix container size on multiple delayed intervals to guarantee full tile coverage
+    const invalidate = () => {
+      try {
+        map.invalidateSize();
+      } catch {}
+    };
+
+    const timer1 = setTimeout(invalidate, 100);
+    const timer2 = setTimeout(invalidate, 400);
+    const timer3 = setTimeout(invalidate, 1200);
+
+    const handleResize = () => invalidate();
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleResize);
 
     let resizeObserver: ResizeObserver | null = null;
     if (mapContainerRef.current) {
       resizeObserver = new ResizeObserver(() => {
-        map.invalidateSize();
+        invalidate();
       });
       resizeObserver.observe(mapContainerRef.current);
     }
@@ -116,28 +104,26 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      clearTimeout(timer3);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleResize);
       resizeObserver?.disconnect();
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // 2. Change Tile Layer Style & Dark Filter (Zero Watermark Free Layer)
+  // 2. Change Tile Layer Style with Zero Watermark & Automatic Failover
   useEffect(() => {
-    if (!mapInstanceRef.current || !tileLayerRef.current) return;
-    tileLayerRef.current.setUrl(getTileUrl(mapLayer));
-
-    // Apply dark mode CSS inversion filter on standard OSM tiles for clean dark theme without Carto watermark
-    const container = tileLayerRef.current.getContainer();
-    if (container) {
-      if (mapLayer === 'dark') {
-        container.style.filter =
-          'invert(100%) hue-rotate(180deg) brightness(92%) contrast(92%)';
-      } else {
-        container.style.filter = 'none';
-      }
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      tileLayerRef.current.remove();
     }
-    mapInstanceRef.current.invalidateSize();
+    const newLayer = createRobustTileLayer(mapLayer as any);
+    newLayer.addTo(map);
+    tileLayerRef.current = newLayer;
+    map.invalidateSize();
   }, [mapLayer]);
 
   // 3. Render Geofence Circles around Retailers
@@ -491,6 +477,16 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     }
   };
 
+  const handleRefreshMap = () => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.invalidateSize();
+    if (myDeviceCoords) {
+      mapInstanceRef.current.flyTo([myDeviceCoords.lat, myDeviceCoords.lng], 15, { duration: 0.8 });
+    } else if (reps.length > 0 && reps[0].coords) {
+      mapInstanceRef.current.flyTo([reps[0].coords.lat, reps[0].coords.lng], 14, { duration: 0.8 });
+    }
+  };
+
   const locatingActive = isLocating || internalLocating;
 
   return (
@@ -623,6 +619,13 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
           className="p-2.5 bg-slate-900/90 backdrop-blur-md text-slate-200 hover:text-white hover:bg-slate-800 border border-slate-700/80 rounded-xl shadow-lg transition-all cursor-pointer"
         >
           <Maximize2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={handleRefreshMap}
+          title="Force Refresh & Re-align Map Tiles"
+          className="p-2.5 bg-slate-900/90 backdrop-blur-md text-emerald-400 hover:text-white hover:bg-emerald-600 border border-slate-700/80 rounded-xl shadow-lg transition-all cursor-pointer"
+        >
+          <RotateCcw className="w-4 h-4" />
         </button>
       </div>
 
