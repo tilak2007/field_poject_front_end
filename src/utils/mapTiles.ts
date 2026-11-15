@@ -11,49 +11,49 @@ export interface TileProviderConfig {
 }
 
 /**
- * Enterprise-Grade Free CDN Map Tile Providers (Zero API Key, Unlimited Global Bandwidth)
- * Hosted on Akamai / Fastly multi-region edge caches.
- * Eliminates HTTP 429 "Too Many Requests" rate limits from raw OSM servers.
+ * Enterprise-Grade Free CDN Map Tile Providers (Zero API Key, Unlimited Global Bandwidth, Zero Watermarks)
+ * Hosted on Akamai / Esri ArcGIS Global multi-region edge caches.
+ * Eliminates HTTP 429 "Too Many Requests" rate limits and avoids API key watermarks.
  */
 export const MAP_PROVIDERS: Record<MapStyleType, TileProviderConfig> = {
   streets: {
-    // CartoDB Voyager: ultra-fast street map with high-DPI retina support, zero rate limits
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    subdomains: 'abcd',
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    // Esri World Street Map: ultra-clean high-resolution streets, landmarks, zero watermarks
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    subdomains: '',
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri &mdash; Street Map',
     fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   },
   dark: {
-    // CartoDB Dark Matter: True native dark mode map (high contrast, crisp neon lines)
-    url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-    subdomains: 'abcd',
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    // Esri Dark Gray Canvas: High contrast dark theme, zero watermarks
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    subdomains: '',
+    maxZoom: 16,
+    attribution: 'Tiles &copy; Esri &mdash; Dark Canvas',
+    fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
   },
   satellite: {
     // Esri World Imagery: Ultra-high resolution global satellite photography
     url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
     subdomains: '',
     maxZoom: 19,
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
-    fallbackUrl: 'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+    attribution: 'Tiles &copy; Esri &mdash; Satellite Imagery',
+    fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
   },
   terrain: {
-    // CartoDB Positron: Clean high-contrast topographic light map
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    subdomains: 'abcd',
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    // Esri World Topo Map: Clean topographic contours and hillshading
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    subdomains: '',
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri &mdash; Topographic',
+    fallbackUrl: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
   },
   humanitarian: {
     // High-visibility crisp routing tiles
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    subdomains: 'abcd',
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    subdomains: '',
+    maxZoom: 19,
+    attribution: 'Tiles &copy; Esri',
     fallbackUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   },
 };

@@ -52,7 +52,7 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
   const [autoFollow, setAutoFollow] = useState(true);
   const [internalLocating, setInternalLocating] = useState(false);
   const [hasInitialCentered, setHasInitialCentered] = useState(false);
-  const [liveGpsLabel, setLiveGpsLabel] = useState<string>('📡 Live CDN: CartoDB / Fastly Edge (100% Free • Unlimited)');
+  const [liveGpsLabel, setLiveGpsLabel] = useState<string>('📡 Live CDN: Esri ArcGIS / Edge CDN (100% Free • Unlimited)');
 
   // 1. Initialize Leaflet Map with Enterprise-Grade CDN
   useEffect(() => {

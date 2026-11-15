@@ -655,7 +655,7 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
           </div>
 
           <div className="bg-slate-950/80 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-slate-800 text-[10px] text-emerald-400 font-semibold">
-            <span>📡 Live CDN: CartoDB / Fastly Edge • 100% Free & Unlimited</span>
+            <span>📡 Live CDN: Esri ArcGIS / Edge CDN • 100% Free & Unlimited</span>
           </div>
         </div>
       </div>
