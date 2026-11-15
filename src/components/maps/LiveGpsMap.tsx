@@ -75,8 +75,10 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
     // Center on default territory or user coords if already available
     const initialCenter: [number, number] = myDeviceCoords
       ? [myDeviceCoords.lat, myDeviceCoords.lng]
-      : [28.685, 77.145];
-    const initialZoom = myDeviceCoords ? 15 : 12;
+      : reps.length > 0 && reps[0].coords
+      ? [reps[0].coords.lat, reps[0].coords.lng]
+      : [12.9298, 77.5832]; // Default territory hub: Bengaluru South
+    const initialZoom = myDeviceCoords ? 15 : reps.length > 0 ? 13 : 12;
 
     const map = L.map(mapContainerRef.current, {
       center: initialCenter,
@@ -394,6 +396,27 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
       setHasInitialCentered(true);
     }
   }, [myDeviceCoords, hasInitialCentered]);
+
+  // Auto-center on fleet reps when telemetry arrives if user device GPS is not active
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || hasInitialCentered || myDeviceCoords || reps.length === 0) return;
+
+    const validCoords = reps.filter(
+      (r) => r.coords && typeof r.coords.lat === 'number' && typeof r.coords.lng === 'number'
+    );
+    if (validCoords.length > 0) {
+      if (validCoords.length === 1) {
+        map.panTo([validCoords[0].coords.lat, validCoords[0].coords.lng], { animate: true });
+      } else {
+        const bounds = L.latLngBounds(validCoords.map((r) => [r.coords.lat, r.coords.lng]));
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+        }
+      }
+      setHasInitialCentered(true);
+    }
+  }, [reps, hasInitialCentered, myDeviceCoords]);
 
   // Handle Locate Me (Browser Geolocation with multi-tier fallback)
   const handleLocateMeClick = () => {

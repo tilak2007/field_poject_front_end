@@ -83,7 +83,9 @@ export const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const localRecord = localStorage.getItem(`attendance_${today}`);
+    const userKey = user?.id || (user?.email ? user.email.replace(/[^a-zA-Z0-9]/g, '_') : 'usr_default');
+    const userRecord = localStorage.getItem(`fieldassist_attendance_${userKey}_${today}`);
+    const localRecord = userRecord || localStorage.getItem(`attendance_${today}`);
     if (localRecord) {
       try {
         const parsed = JSON.parse(localRecord);
@@ -93,7 +95,7 @@ export const Dashboard: React.FC = () => {
         }
       } catch {}
     }
-  }, []);
+  }, [user]);
 
   // Specified Area Retail Network: Load all retail outlets in the representative's assigned territory
   const areaRetailers = useMemo(() => {

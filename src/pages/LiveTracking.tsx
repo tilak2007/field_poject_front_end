@@ -97,17 +97,33 @@ export const LiveTracking: React.FC = () => {
   // 4. One-click High-Accuracy Real GPS Locate
   const handleLocateMe = () => {
     setIsLocating(true);
+    setBroadcastFeedback('📡 Acquiring real device location (GPS & Network)...');
     acquireLiveLocation(
       (loc: GeoLocationResult) => {
         setIsLocating(false);
-        setMyCoords({ lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy });
+        const coords = { lat: loc.lat, lng: loc.lng, accuracy: loc.accuracy };
+        setMyCoords(coords);
         setSelectedRepId('rep-my-device');
         setBroadcastFeedback(
-          `📍 Real Live GPS Locked: ${loc.lat}, ${loc.lng} (${loc.city || '±' + loc.accuracy + 'm accuracy'}). Free OpenStreetMap API Active.`
+          `📍 Real Live GPS Locked: ${loc.lat.toFixed(5)}, ${loc.lng.toFixed(5)} (${loc.city || '±' + loc.accuracy + 'm accuracy'}). Live Fleet Radar Active.`
         );
-        if (!isBroadcastingDevice) {
-          startDeviceBroadcast();
-        }
+        try {
+          localStorage.setItem('fieldassist_user_coords', JSON.stringify({ ...coords, city: loc.city }));
+        } catch {}
+
+        // Broadcast to backend fleet radar
+        gpsApi
+          .broadcastDevicePing({
+            repId: user?.id || 'rep-my-device',
+            repName: user?.name || 'Current User (Live Device)',
+            latitude: loc.lat,
+            longitude: loc.lng,
+            speed: 0,
+            heading: 0,
+            status: 'Moving',
+            activity: 'Live GPS Location Fix',
+          })
+          .catch(() => {});
       },
       (status) => {
         setBroadcastFeedback(status);
@@ -128,7 +144,7 @@ export const LiveTracking: React.FC = () => {
 
         setMyCoords({ lat, lng, accuracy });
         setBroadcastFeedback(
-          `📡 Real GPS Locked: ${lat}, ${lng} (±${accuracy}m). Broadcasting live to fleet radar...`
+          `📡 Real GPS Stream: ${lat}, ${lng} (±${accuracy}m). Broadcasting live to fleet radar...`
         );
 
         try {
@@ -151,14 +167,17 @@ export const LiveTracking: React.FC = () => {
         }
       },
       (err) => {
-        console.warn('Device geolocation error:', err);
-        setBroadcastFeedback('Unable to acquire device GPS coordinates. Check location permissions.');
+        console.warn('Device continuous GPS watch notice:', err.message);
         setIsBroadcastingDevice(false);
+        // Only show message if we don't already have live coords
+        if (!myCoords) {
+          setBroadcastFeedback('Device hardware GPS watch paused. Using network location lock.');
+        }
       },
       {
         enableHighAccuracy: true,
-        maximumAge: 5000,
-        timeout: 10000,
+        maximumAge: 10000,
+        timeout: 12000,
       }
     );
   };
@@ -335,13 +354,16 @@ export const LiveTracking: React.FC = () => {
               }}
               className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 focus:outline-none focus:border-brand-500 cursor-pointer"
             >
-              <option value="" disabled>Select Bengaluru Beat Location</option>
+              <option value="" disabled>Select Beat / Operating Territory Location</option>
               <option value="gps">📡 Auto-Detect My Live Device GPS</option>
               <option value="12.9295:77.5830:Bengaluru South (Jayanagar)">Bengaluru South (Jayanagar 4th Block)</option>
               <option value="12.9082:77.5740:Bengaluru South (JP Nagar)">Bengaluru South (JP Nagar 7th Phase)</option>
               <option value="12.9165:77.6101:Bengaluru Central (BTM Layout)">Bengaluru Central (BTM Layout 2nd Stage)</option>
               <option value="12.9340:77.6220:Bengaluru East (Koramangala)">Bengaluru East (Koramangala 5th Block)</option>
               <option value="12.9220:77.5680:Bengaluru West (Banashankari)">Bengaluru West (Banashankari 2nd Stage)</option>
+              <option value="18.9220:72.8347:Mumbai South (Colaba - Marine Lines)">Mumbai South (Colaba)</option>
+              <option value="28.6139:77.2090:Delhi NCR (Connaught Place)">Delhi NCR (Connaught Place)</option>
+              <option value="22.5726:88.3639:Kolkata Central (Park Street)">Kolkata Central (Park Street)</option>
             </select>
           </div>
 
