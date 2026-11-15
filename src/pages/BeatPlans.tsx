@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Plus, Map, LayoutGrid, X, CheckCircle2, Calendar, User, Navigation, Clock } from 'lucide-react';
 import { mockBeatPlans } from '../data/mockData';
 import { BeatPlanningMap } from '@/components/maps/BeatPlanningMap';
+import { useAuth } from '../context/AuthContext';
+import { isUnderManagerTerritory } from '../utils/territory';
 import type { BeatPlan } from '../types';
 
 export const BeatPlans: React.FC = () => {
@@ -19,8 +21,22 @@ export const BeatPlans: React.FC = () => {
     return mockBeatPlans;
   });
 
+  const { user } = useAuth();
+  const isManager = user?.role === 'Sales Manager';
+  const isRep = user?.role === 'Sales Representative';
+
+  // Territory governance: Sales Manager sees beats under their territory, Sales Rep sees their assigned beats
+  const visibleBeats = isRep
+    ? (user?.email === 'vikram@fieldassist.io'
+        ? beatPlansList.filter((b) => b.repName.toLowerCase().includes('vikram') || b.repId === 'rep-1')
+        : beatPlansList.filter((b) => (user?.name && b.repName.toLowerCase() === user.name.toLowerCase()) || (user?.id && b.repId === user.id))
+      )
+    : isManager
+    ? beatPlansList.filter((b) => isUnderManagerTerritory(user, { territory: b.territory }))
+    : beatPlansList;
+
   const [selectedBeatId, setSelectedBeatId] = useState<string>(() => {
-    return beatPlansList[0]?.id || 'beat-01';
+    return visibleBeats[0]?.id || beatPlansList[0]?.id || 'beat-01';
   });
   const [viewMode, setViewMode] = useState<'map' | 'grid'>('map');
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -164,7 +180,7 @@ export const BeatPlans: React.FC = () => {
       <div className="space-y-4 pt-2">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-            Active Beat Schedules ({beatPlansList.length})
+            Active Beat Schedules ({visibleBeats.length})
           </h2>
           <button
             onClick={handleOpenCreateModal}
@@ -176,7 +192,7 @@ export const BeatPlans: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {beatPlansList.map((beat) => {
+          {visibleBeats.map((beat) => {
             const isSelected = selectedBeatId === beat.id;
 
             return (

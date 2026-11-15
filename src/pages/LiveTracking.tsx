@@ -21,6 +21,7 @@ import { UserAvatar } from '../components/common/UserAvatar';
 import { gpsApi, type FleetGpsResponse } from '../api/gpsApi';
 import { useAuth } from '../context/AuthContext';
 import { acquireLiveLocation, type GeoLocationResult } from '../utils/geolocation';
+import { isUnderManagerTerritory } from '../utils/territory';
 
 export const LiveTracking: React.FC = () => {
   const { user } = useAuth();
@@ -187,21 +188,33 @@ export const LiveTracking: React.FC = () => {
 
   const allReps = fleetData?.reps || [];
   const isRep = user?.role === 'Sales Representative';
-  // Sales Rep privacy isolation: a rep only tracks their own device and assigned beat
+  const isManager = user?.role === 'Sales Manager';
+
+  // Strict Role-Based Fleet Radar Scoping:
+  // 1. Sales Representative: Personal privacy isolation (tracks only their own device)
+  // 2. Sales Manager: Strictly restricted to reps under their assigned territory jurisdiction
+  //    (e.g. Bangalore manager ONLY tracks Bangalore reps, never Mumbai/Delhi/Kolkata reps)
+  // 3. System Admin: Global executive oversight (all India reps nationwide)
   const reps = isRep
     ? (user?.email === 'vikram@fieldassist.io'
         ? allReps.filter((r) => r.id === 'rep-1' || r.name.toLowerCase().includes('vikram'))
         : allReps.filter((r) => (user?.id && r.id === user.id) || (user?.name && r.name.toLowerCase() === user.name.toLowerCase()))
       )
+    : isManager
+    ? allReps.filter((r) => isUnderManagerTerritory(user, r))
     : allReps;
+
   const geofencedOutlets = fleetData?.geofencedOutlets || [];
-  const summary = fleetData?.fleetSummary || {
+  const summary = {
     totalReps: isRep ? 1 : reps.length,
     moving: reps.filter((r) => r.status === 'Moving').length,
     atStore: reps.filter((r) => r.status === 'At Store').length,
     idle: reps.filter((r) => r.status === 'Idle').length,
     geofencesActive: geofencedOutlets.length,
-    averageFleetBattery: reps[0]?.batteryLevel || 78,
+    averageFleetBattery:
+      reps.length > 0
+        ? Math.round(reps.reduce((acc, r) => acc + (r.batteryLevel || 75), 0) / reps.length)
+        : 80,
   };
 
   const filteredReps = reps.filter((r) => {
@@ -390,6 +403,32 @@ export const LiveTracking: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Sales Manager Territory Radar Banner */}
+      {isManager && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-slate-900 border border-blue-500/30 text-xs shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-sm">Territory Fleet Radar Active:</span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-bold text-xs border border-blue-500/30">
+                  {user?.territory || 'Bengaluru'} Jurisdiction
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs mt-0.5">
+                Strict territory governance enforced. Tracking <strong className="text-white">{reps.length} representatives</strong> under your operating jurisdiction. Reps from other territories (e.g. Mumbai, Delhi, Kolkata) are strictly isolated.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/20 self-start sm:self-center shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            {reps.length} Reps In Jurisdiction
+          </span>
+        </div>
+      )}
 
       {/* Broadcast Status Banner */}
       <AnimatePresence>
@@ -712,6 +751,17 @@ export const LiveTracking: React.FC = () => {
                   </div>
                 );
               })}
+
+              {filteredReps.length === 0 && (
+                <div className="p-6 rounded-2xl bg-slate-950/60 border border-slate-800 text-center space-y-2">
+                  <p className="text-xs font-semibold text-slate-300">No representatives in this view</p>
+                  <p className="text-[11px] text-slate-500">
+                    {isManager
+                      ? `Your account is restricted to tracking field staff within your assigned territory (${user?.territory || 'Bengaluru'}). Reps outside your territory are strictly isolated.`
+                      : 'Try adjusting your search query or status filter.'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

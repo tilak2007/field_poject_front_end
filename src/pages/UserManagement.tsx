@@ -613,11 +613,15 @@ export const UserManagement: React.FC = () => {
                   onChange={(e) => setNewTerritory(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white focus:outline-none focus:border-brand-500"
                 >
+                  <option value="Bengaluru">Bengaluru (All City Beats)</option>
                   <option value="Bengaluru South">Bengaluru South</option>
                   <option value="Bengaluru Central">Bengaluru Central</option>
                   <option value="Bengaluru East">Bengaluru East</option>
                   <option value="Bengaluru West">Bengaluru West</option>
-                  <option value="National HQ">National HQ</option>
+                  <option value="Mumbai South">Mumbai South</option>
+                  <option value="Delhi NCR">Delhi NCR</option>
+                  <option value="Kolkata Central">Kolkata Central</option>
+                  <option value="National HQ">National HQ (All India)</option>
                 </select>
               </div>
 

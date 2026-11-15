@@ -5,6 +5,7 @@ import { mockTargets } from '../data/mockData';
 import type { Target } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { exportToCsv } from '../utils/exportCsv';
+import { isUnderManagerTerritory } from '../utils/territory';
 
 export const Targets: React.FC = () => {
   const { user } = useAuth();
@@ -35,12 +36,19 @@ export const Targets: React.FC = () => {
   const [visitsTargetCount, setVisitsTargetCount] = useState<number>(160);
   const [newOutletsTargetCount, setNewOutletsTargetCount] = useState<number>(15);
 
+  const isManager = user?.role === 'Sales Manager';
+
   // Available reps for Manager target allocation dropdown
   const availableReps = useMemo(() => {
     const list = [
       { name: 'Vikram Sharma', territory: 'Bengaluru South' },
       { name: 'Ananya Verma', territory: 'Bengaluru Central' },
       { name: 'Rahul Deshmukh', territory: 'Bengaluru East' },
+      { name: 'Sneha Roy', territory: 'Bengaluru South' },
+      { name: 'Nagarjun B.G.', territory: 'Bengaluru South' },
+      { name: 'Rohit Mehta', territory: 'Mumbai South' },
+      { name: 'Amitabh Ghosh', territory: 'Kolkata Central' },
+      { name: 'Suresh Raina', territory: 'Delhi NCR' },
     ];
     try {
       const stored = localStorage.getItem('fieldassist_accounts_registry');
@@ -53,8 +61,13 @@ export const Targets: React.FC = () => {
         });
       }
     } catch {}
+
+    // Strict Manager Territory filter: Managers can only allocate targets to reps in their territory!
+    if (isManager) {
+      return list.filter((r) => isUnderManagerTerritory(user, r));
+    }
     return list;
-  }, []);
+  }, [user, isManager]);
 
   const repMatchedTargets = targetsList.filter(
     (t) =>
@@ -66,7 +79,24 @@ export const Targets: React.FC = () => {
 
   // Sales Rep can ONLY see their own personal target. No comparisons or other reps' metrics.
   // Newly created accounts do NOT receive predefined targets until allocated by Area Sales Manager!
-  const visibleTargets: Target[] = isRep ? repMatchedTargets : targetsList;
+  // Sales Manager strictly sees targets of reps under their assigned territory!
+  const visibleTargets: Target[] = isRep
+    ? repMatchedTargets
+    : isManager
+    ? targetsList.filter((t) => {
+        const repInfo = {
+          territory:
+            t.repName.toLowerCase().includes('rohit')
+              ? 'Mumbai South'
+              : t.repName.toLowerCase().includes('amitabh')
+              ? 'Kolkata Central'
+              : t.repName.toLowerCase().includes('suresh')
+              ? 'Delhi NCR'
+              : 'Bengaluru South',
+        };
+        return isUnderManagerTerritory(user, repInfo);
+      })
+    : targetsList;
 
   const handleOpenAllocateModal = () => {
     if (!isManagerOrAdmin) {

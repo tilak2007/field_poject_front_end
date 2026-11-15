@@ -21,6 +21,7 @@ import type { Visit } from '../types';
 import { visitsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { exportToCsv } from '../utils/exportCsv';
+import { isUnderManagerTerritory } from '../utils/territory';
 
 export const Visits: React.FC = () => {
   const { user } = useAuth();
@@ -63,6 +64,7 @@ export const Visits: React.FC = () => {
   const [visitNotes, setVisitNotes] = useState('');
 
   const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+  const isManager = user?.role === 'Sales Manager';
 
   const visibleVisits = isRep
     ? (user?.email === 'vikram@fieldassist.io'
@@ -77,6 +79,26 @@ export const Visits: React.FC = () => {
               (user?.name && v.repName.toLowerCase() === user.name.toLowerCase())
           )
       )
+    : isManager
+    ? visitsList.filter((v) => {
+        const repInfo = {
+          territory:
+            v.repName.toLowerCase().includes('rohit')
+              ? 'Mumbai South'
+              : v.repName.toLowerCase().includes('amitabh')
+              ? 'Kolkata Central'
+              : v.repName.toLowerCase().includes('suresh')
+              ? 'Delhi NCR'
+              : v.retailerAddress.toLowerCase().includes('mumbai')
+              ? 'Mumbai South'
+              : v.retailerAddress.toLowerCase().includes('delhi')
+              ? 'Delhi NCR'
+              : v.retailerAddress.toLowerCase().includes('kolkata')
+              ? 'Kolkata Central'
+              : 'Bengaluru South',
+        };
+        return isUnderManagerTerritory(user, repInfo);
+      })
     : visitsList;
 
   const filteredVisits = visibleVisits.filter(

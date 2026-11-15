@@ -23,6 +23,7 @@ import type { Order, OrderItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { ordersApi, productsApi } from '../api';
 import { exportToCsv } from '../utils/exportCsv';
+import { isUnderManagerTerritory } from '../utils/territory';
 
 interface ActiveProduct {
   id: string;
@@ -374,6 +375,7 @@ export const Orders: React.FC = () => {
   };
 
   const isNewRep = isRep && user?.email !== 'vikram@fieldassist.io';
+  const isManager = user?.role === 'Sales Manager';
 
   const visibleOrders = isRep
     ? (user?.email === 'vikram@fieldassist.io'
@@ -390,6 +392,26 @@ export const Orders: React.FC = () => {
               (user?.email && (o as any).repEmail === user.email)
           )
       )
+    : isManager
+    ? orders.filter((o) => {
+        const repInfo = {
+          territory:
+            o.repName.toLowerCase().includes('rohit')
+              ? 'Mumbai South'
+              : o.repName.toLowerCase().includes('amitabh')
+              ? 'Kolkata Central'
+              : o.repName.toLowerCase().includes('suresh')
+              ? 'Delhi NCR'
+              : o.retailerName.toLowerCase().includes('mumbai')
+              ? 'Mumbai South'
+              : o.retailerName.toLowerCase().includes('delhi')
+              ? 'Delhi NCR'
+              : o.retailerName.toLowerCase().includes('kolkata')
+              ? 'Kolkata Central'
+              : 'Bengaluru South',
+        };
+        return isUnderManagerTerritory(user, repInfo);
+      })
     : orders;
 
   const filteredOrders = visibleOrders.filter((o) => {

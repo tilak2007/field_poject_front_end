@@ -17,6 +17,8 @@ import {
 import { mockSalesReps, mockVisits, mockOrders } from '../data/mockData';
 import { repsApi } from '../api/repsApi';
 import { UserAvatar } from '../components/common/UserAvatar';
+import { useAuth } from '../context/AuthContext';
+import { isUnderManagerTerritory } from '../utils/territory';
 import type { SalesRep } from '../types';
 
 export const SalesReps: React.FC = () => {
@@ -70,8 +72,25 @@ export const SalesReps: React.FC = () => {
     }
   }, [id, repsList]);
 
+  const { user } = useAuth();
+  const isManager = user?.role === 'Sales Manager';
+  const isRep = user?.role === 'Sales Representative';
+
+  // Strict Territory Isolation:
+  // - Sales Representative: personal profile only
+  // - Sales Manager: only reps under their assigned territory (e.g. Bangalore manager only sees Bangalore reps)
+  // - System Admin: all reps nationwide
+  const territoryReps = isRep
+    ? (user?.email === 'vikram@fieldassist.io'
+        ? repsList.filter((r) => r.id === 'rep-1' || r.name.toLowerCase().includes('vikram'))
+        : repsList.filter((r) => (user?.id && r.id === user.id) || (user?.name && r.name.toLowerCase() === user.name.toLowerCase()))
+      )
+    : isManager
+    ? repsList.filter((r) => isUnderManagerTerritory(user, r))
+    : repsList;
+
   // Filter Sales Reps by Name, Territory, or Phone
-  const filteredReps = repsList.filter((rep) => {
+  const filteredReps = territoryReps.filter((rep) => {
     const matchesSearch =
       rep.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rep.territory.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,6 +139,32 @@ export const SalesReps: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Sales Manager Territory Staff Banner */}
+      {isManager && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-blue-950/60 via-slate-900 to-slate-900 border border-blue-500/30 text-xs shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400 shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white text-sm">Territory Staff Management:</span>
+                <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-bold text-xs border border-blue-500/30">
+                  {user?.territory || 'Bengaluru'} Jurisdiction
+                </span>
+              </div>
+              <p className="text-slate-400 text-xs mt-0.5">
+                Displaying <strong className="text-white">{territoryReps.length} representatives</strong> assigned under your territory. Outside representatives are restricted from your directory.
+              </p>
+            </div>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 text-xs font-bold border border-blue-500/20 shrink-0 self-start sm:self-center">
+            <MapPin className="w-3.5 h-3.5" />
+            {territoryReps.length} Reps In Jurisdiction
+          </span>
+        </div>
+      )}
 
       {/* Search & Filter Bar */}
       <div className="glass-panel p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
