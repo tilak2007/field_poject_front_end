@@ -15,6 +15,8 @@ import {
   Download,
   LogIn,
   Check,
+  Navigation,
+  Compass,
 } from 'lucide-react';
 import { mockVisits, mockRetailers } from '../data/mockData';
 import type { Visit } from '../types';
@@ -22,6 +24,59 @@ import { visitsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { exportToCsv } from '../utils/exportCsv';
 import { isUnderManagerTerritory } from '../utils/territory';
+
+// Distance & Bearing calculations
+function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
+function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): { degrees: number; cardinal: string } {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const deltaLam = toRad(lon2 - lon1);
+
+  const y = Math.sin(deltaLam) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(deltaLam);
+  let brng = toDeg(Math.atan2(y, x));
+  brng = (brng + 360) % 360;
+
+  const cardinals = [
+    'North (N)',
+    'North-East (NE)',
+    'East (E)',
+    'South-East (SE)',
+    'South (S)',
+    'South-West (SW)',
+    'West (W)',
+    'North-West (NW)',
+  ];
+  const index = Math.round(brng / 45) % 8;
+  return { degrees: Math.round(brng), cardinal: cardinals[index] };
+}
+
+// Well-known coordinates for field retail stores
+const STORE_COORDS: Record<string, { lat: number; lng: number }> = {
+  'Sri Manjunatha Provision Store': { lat: 12.9298, lng: 77.5832 },
+  'Shree Lakshmi Supermart': { lat: 12.9082, lng: 77.5740 },
+  'Venkateshwara Traders': { lat: 12.9165, lng: 77.6101 },
+  'Ganesh Grand Bazaar': { lat: 12.9352, lng: 77.6245 },
+  'Balaji Daily Needs': { lat: 12.9250, lng: 77.5938 },
+  'National Bakery & Provisions': { lat: 12.9421, lng: 77.5750 },
+  'Royal Super Market': { lat: 12.9110, lng: 77.5855 },
+  'Krishna Departmental Store': { lat: 12.9380, lng: 77.6050 },
+};
 
 export const Visits: React.FC = () => {
   const { user } = useAuth();
@@ -53,6 +108,45 @@ export const Visits: React.FC = () => {
   const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Live user coordinates for distance & bearing calculation
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('fieldassist_user_coords');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          setUserCoords(coords);
+          localStorage.setItem('fieldassist_user_coords', JSON.stringify(coords));
+        },
+        () => {},
+        { timeout: 6000, enableHighAccuracy: true }
+      );
+    }
+  }, []);
+
+  const getRetailerNavInfo = (retailerName: string, retailerAddress: string) => {
+    const known = STORE_COORDS[retailerName];
+    const originLat = userCoords?.lat || 12.9298;
+    const originLng = userCoords?.lng || 77.5832;
+    const destLat = known?.lat || 12.9298;
+    const destLng = known?.lng || 77.5832;
+
+    const distKm = calculateDistanceKm(originLat, originLng, destLat, destLng);
+    const bearing = calculateBearing(originLat, originLng, destLat, destLng);
+    const navUrl = userCoords
+      ? `https://www.google.com/maps/dir/?api=1&origin=${userCoords.lat},${userCoords.lng}&destination=${destLat},${destLng}&travelmode=driving`
+      : `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(retailerName + ', ' + retailerAddress)}&travelmode=driving`;
+
+    return { distKm, bearing, navUrl };
+  };
 
   // Form state
   const [selectedRetailerName, setSelectedRetailerName] = useState('Sri Manjunatha Provision Store');
@@ -333,72 +427,94 @@ export const Visits: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-medium">
-              {filteredVisits.map((v) => (
-                <tr key={v.id} className="hover:bg-slate-900/60 transition-colors">
-                  <td className="py-4 px-4 text-brand-400 font-mono font-bold">{v.visitCode}</td>
-                  <td className="py-4 px-4 font-bold text-white">{v.retailerName}</td>
-                  <td className="py-4 px-4 text-slate-300 font-semibold">{v.repName}</td>
-                  <td className="py-4 px-4 text-slate-400">{v.visitType}</td>
-                  <td className="py-4 px-4 text-slate-300">{v.actualCheckIn || v.plannedTime}</td>
-                  <td className="py-4 px-4">
-                    {v.geofenceVerified ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
-                        <ShieldCheck className="w-4 h-4" /> Verified (50m)
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-[11px]">Pending</span>
-                    )}
-                  </td>
-                  <td className="py-4 px-4 font-bold text-emerald-400">
-                    {v.orderBookedAmount > 0 ? `₹${v.orderBookedAmount.toLocaleString('en-IN')}` : '—'}
-                  </td>
-                  <td className="py-4 px-4">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        v.status === 'Completed'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : v.status === 'In Progress'
-                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
-                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                      }`}
-                    >
-                      {v.status}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <div className="flex items-center justify-end gap-1.5">
-                      {/* Check-In Action Button */}
-                      {v.status === 'Scheduled' || v.status === 'Missed' ? (
-                        <button
-                          onClick={() => handleCheckInVisit(v.id)}
-                          className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                          title="Check In to Outlet (Geofence Verify)"
-                        >
-                          <LogIn className="w-3.5 h-3.5" />
-                          <span>Check In</span>
-                        </button>
-                      ) : v.status === 'In Progress' ? (
-                        <button
-                          onClick={() => handleCompleteVisit(v.id)}
-                          className="px-2.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-md shadow-brand-600/30"
-                          title="Complete Visit & Log Audit"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Complete</span>
-                        </button>
-                      ) : null}
-
-                      <button
-                        onClick={() => setSelectedVisit(v)}
-                        className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600 transition-colors cursor-pointer"
-                        title="Inspect Visit"
+              {filteredVisits.map((v) => {
+                const nav = getRetailerNavInfo(v.retailerName, v.retailerAddress);
+                return (
+                  <tr key={v.id} className="hover:bg-slate-900/60 transition-colors">
+                    <td className="py-4 px-4 text-brand-400 font-mono font-bold">{v.visitCode}</td>
+                    <td className="py-4 px-4 font-bold text-white">
+                      <div>{v.retailerName}</div>
+                      <div className="text-[10px] text-slate-400 font-normal flex items-center gap-1.5 mt-0.5">
+                        <span className="truncate max-w-[180px]">{v.retailerAddress}</span>
+                        <span className="text-emerald-400 font-mono font-semibold shrink-0">
+                          • {nav.distKm} km ({nav.bearing.cardinal.split(' ')[1] || nav.bearing.cardinal})
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-slate-300 font-semibold">{v.repName}</td>
+                    <td className="py-4 px-4 text-slate-400">{v.visitType}</td>
+                    <td className="py-4 px-4 text-slate-300">{v.actualCheckIn || v.plannedTime}</td>
+                    <td className="py-4 px-4">
+                      {v.geofenceVerified ? (
+                        <span className="inline-flex items-center gap-1 text-emerald-400 font-bold text-[11px]">
+                          <ShieldCheck className="w-4 h-4" /> Verified (50m)
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">Pending</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4 font-bold text-emerald-400">
+                      {v.orderBookedAmount > 0 ? `₹${v.orderBookedAmount.toLocaleString('en-IN')}` : '—'}
+                    </td>
+                    <td className="py-4 px-4">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          v.status === 'Completed'
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                            : v.status === 'In Progress'
+                            ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30'
+                            : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        }`}
                       >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {v.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Turn-by-Turn Navigation Action */}
+                        <a
+                          href={nav.navUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-xl bg-slate-800 text-emerald-400 hover:text-white hover:bg-emerald-600 transition-colors cursor-pointer"
+                          title="Navigate in Google Maps (Turn-by-turn)"
+                        >
+                          <Navigation className="w-3.5 h-3.5 transform rotate-45" />
+                        </a>
+
+                        {/* Check-In Action Button */}
+                        {v.status === 'Scheduled' || v.status === 'Missed' ? (
+                          <button
+                            onClick={() => handleCheckInVisit(v.id)}
+                            className="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+                            title="Check In to Outlet (Geofence Verify)"
+                          >
+                            <LogIn className="w-3.5 h-3.5" />
+                            <span>Check In</span>
+                          </button>
+                        ) : v.status === 'In Progress' ? (
+                          <button
+                            onClick={() => handleCompleteVisit(v.id)}
+                            className="px-2.5 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-md shadow-brand-600/30"
+                            title="Complete Visit & Log Audit"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Complete</span>
+                          </button>
+                        ) : null}
+
+                        <button
+                          onClick={() => setSelectedVisit(v)}
+                          className="p-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white hover:bg-brand-600 transition-colors cursor-pointer"
+                          title="Inspect Visit"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -620,6 +736,42 @@ export const Visits: React.FC = () => {
                 </p>
               )}
             </div>
+
+            {/* Live GPS Direction & Turn-by-Turn Navigation */}
+            {(() => {
+              const nav = getRetailerNavInfo(selectedVisit.retailerName, selectedVisit.retailerAddress);
+              return (
+                <div className="space-y-2">
+                  <div className="p-3 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
+                        <Compass className="w-3.5 h-3.5 text-brand-400 animate-pulse" />
+                        <span>Live Outlet Proximity:</span>
+                      </span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        {nav.distKm} km away
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-300">
+                      <span className="text-slate-400">Direction from Current Location:</span>
+                      <span className="font-mono font-bold text-brand-300">
+                        {nav.bearing.cardinal} ({nav.bearing.degrees}°)
+                      </span>
+                    </div>
+                  </div>
+
+                  <a
+                    href={nav.navUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Navigation className="w-4 h-4 transform rotate-45" />
+                    <span>🧭 Turn-by-Turn Navigate (Google Maps)</span>
+                  </a>
+                </div>
+              );
+            })()}
 
             {/* Modal Quick Actions */}
             <div className="pt-3 border-t border-slate-800 flex items-center justify-between gap-3">

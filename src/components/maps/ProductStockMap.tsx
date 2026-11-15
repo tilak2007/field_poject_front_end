@@ -33,6 +33,92 @@ interface OutletStockInfo {
   type: string;
 }
 
+// Generate sample or territory retail outlets around the given center point
+const generateOutletsNear = (
+  centerLat: number,
+  centerLng: number,
+  prds: Product[]
+): OutletStockInfo[] => {
+  const offsets = [
+    {
+      dLat: 0.0055,
+      dLng: 0.0062,
+      name: 'Metro Supermart & Groceries',
+      owner: 'Ramesh Gupta',
+      type: 'Supermarket',
+    },
+    {
+      dLat: -0.0042,
+      dLng: 0.0051,
+      name: 'Shree Krishna Daily Provisions',
+      owner: 'Gopal Krishna',
+      type: 'Kirana',
+    },
+    {
+      dLat: 0.0078,
+      dLng: -0.0041,
+      name: 'Royal Wholesale Depot',
+      owner: 'Amrit Singh',
+      type: 'Wholesale',
+    },
+    {
+      dLat: -0.0064,
+      dLng: -0.0073,
+      name: 'City Center Mega Store',
+      owner: 'Sunil Verma',
+      type: 'Supermarket',
+    },
+    {
+      dLat: 0.0021,
+      dLng: -0.0085,
+      name: 'Balaji Express Mart',
+      owner: 'Rajesh Tyagi',
+      type: 'Kirana',
+    },
+    {
+      dLat: -0.0028,
+      dLng: 0.0032,
+      name: 'Apex FMCG Distribution Hub',
+      owner: 'Vikram Mehta',
+      type: 'Depot',
+    },
+  ];
+
+  return offsets.map((o, idx) => {
+    const stockMap: Record<string, number> = {};
+    prds.forEach((p, pIdx) => {
+      stockMap[p.sku] = Math.max(5, ((idx * 7 + pIdx * 13) % 45) + 8);
+    });
+
+    return {
+      id: `outlet-${idx + 1}`,
+      name: o.name,
+      owner: o.owner,
+      phone: `+91 9810${idx} 78${idx}10`,
+      address: `Shop #${12 + idx * 4}, Sector Market`,
+      lat: Number((centerLat + o.dLat).toFixed(6)),
+      lng: Number((centerLng + o.dLng).toFixed(6)),
+      stockMap,
+      type: o.type,
+    };
+  });
+};
+
+// 100% Free Tile Layer URLs (NO API KEY, NO WATERMARK)
+const getTileUrl = (type: MapLayerType) => {
+  switch (type) {
+    case 'satellite':
+      return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+    case 'terrain':
+      return 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
+    case 'dark':
+    case 'streets':
+    default:
+      // Free OpenStreetMap Standard
+      return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  }
+};
+
 export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   products,
   selectedSku,
@@ -51,7 +137,13 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
     lat: number;
     lng: number;
     accuracy?: number;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const saved = localStorage.getItem('fieldassist_user_coords');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return null;
+  });
   const [isLocating, setIsLocating] = useState(false);
   const [locationStatus, setLocationStatus] = useState<string>(
     'Detecting your live device GPS location...'
@@ -59,93 +151,17 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
   const [activeSku, setActiveSku] = useState<string>(
     selectedSku || (products[0]?.sku ?? '')
   );
-  const [outlets, setOutlets] = useState<OutletStockInfo[]>([]);
 
-  // 100% Free Tile Layer URLs (NO API KEY, NO WATERMARK)
-  const getTileUrl = (type: MapLayerType) => {
-    switch (type) {
-      case 'satellite':
-        return 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
-      case 'terrain':
-        return 'https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png';
-      case 'dark':
-      case 'streets':
-      default:
-        // Free OpenStreetMap Standard
-        return 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+  useEffect(() => {
+    if (selectedSku) {
+      setActiveSku(selectedSku);
     }
-  };
+  }, [selectedSku]);
 
-  // Generate or align sample retail outlets around the given center point
-  const generateOutletsNear = (
-    centerLat: number,
-    centerLng: number,
-    prds: Product[]
-  ): OutletStockInfo[] => {
-    const offsets = [
-      {
-        dLat: 0.0055,
-        dLng: 0.0062,
-        name: 'Metro Supermart & Groceries',
-        owner: 'Ramesh Gupta',
-        type: 'Supermarket',
-      },
-      {
-        dLat: -0.0042,
-        dLng: 0.0051,
-        name: 'Shree Krishna Daily Provisions',
-        owner: 'Gopal Krishna',
-        type: 'Kirana',
-      },
-      {
-        dLat: 0.0078,
-        dLng: -0.0041,
-        name: 'Royal Wholesale Depot',
-        owner: 'Amrit Singh',
-        type: 'Wholesale',
-      },
-      {
-        dLat: -0.0064,
-        dLng: -0.0073,
-        name: 'City Center Mega Store',
-        owner: 'Sunil Verma',
-        type: 'Supermarket',
-      },
-      {
-        dLat: 0.0021,
-        dLng: -0.0085,
-        name: 'Balaji Express Mart',
-        owner: 'Rajesh Tyagi',
-        type: 'Kirana',
-      },
-      {
-        dLat: -0.0028,
-        dLng: 0.0032,
-        name: 'Apex FMCG Distribution Hub',
-        owner: 'Vikram Mehta',
-        type: 'Depot',
-      },
-    ];
-
-    return offsets.map((o, idx) => {
-      const stockMap: Record<string, number> = {};
-      prds.forEach((p, pIdx) => {
-        stockMap[p.sku] = Math.max(5, ((idx * 7 + pIdx * 13) % 45) + 8);
-      });
-
-      return {
-        id: `outlet-${idx + 1}`,
-        name: o.name,
-        owner: o.owner,
-        phone: `+91 9810${idx} 78${idx}10`,
-        address: `Shop #${12 + idx * 4}, Sector Market`,
-        lat: Number((centerLat + o.dLat).toFixed(6)),
-        lng: Number((centerLng + o.dLng).toFixed(6)),
-        stockMap,
-        type: o.type,
-      };
-    });
-  };
+  // Immediately initialize outlets with valid locations (Bengaluru South hub: 12.9298, 77.5832 or userCoords)
+  const [outlets, setOutlets] = useState<OutletStockInfo[]>(() => {
+    return generateOutletsNear(12.9298, 77.5832, products);
+  });
 
   // Calculate Haversine distance in km
   const getDistanceKm = (
@@ -417,9 +433,12 @@ export const ProductStockMap: React.FC<ProductStockMapProps> = ({
               </div>
             </div>
 
-            <div style="margin-top: 8px; display: flex; gap: 4px;">
-              <a href="tel:${outlet.phone}" style="flex: 1; text-align: center; padding: 4px 8px; background: #2563eb; color: white; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none;">
+            <div style="margin-top: 8px; display: flex; gap: 6px;">
+              <a href="tel:${outlet.phone}" style="flex: 1; text-align: center; padding: 5px 8px; background: #334155; color: white; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none;">
                 Call Store
+              </a>
+              <a href="https://www.google.com/maps/dir/?api=1&origin=${userCoords ? `${userCoords.lat},${userCoords.lng}` : ''}&destination=${outlet.lat},${outlet.lng}&travelmode=driving" target="_blank" rel="noopener noreferrer" style="flex: 1.3; text-align: center; padding: 5px 8px; background: #059669; color: white; border-radius: 6px; font-size: 11px; font-weight: 700; text-decoration: none;">
+                🧭 Navigate
               </a>
             </div>
           </div>

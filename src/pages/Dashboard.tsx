@@ -42,10 +42,9 @@ import {
   mockTopProducts,
   mockOrders,
   mockVisits,
-  mockTargets,
   mockRetailers,
 } from '../data/mockData';
-import { dashboardApi } from '../api';
+import { dashboardApi, targetsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 
 interface DashboardStats {
@@ -118,36 +117,9 @@ export const Dashboard: React.FC = () => {
     return matched.length > 0 ? matched : mockRetailers.slice(0, 5);
   }, [userTerritory]);
 
-  // Dynamically load target assigned to the current Sales Rep
-  // Newly created accounts do NOT have predefined targets!
+  // Dynamically load target assigned to the current Sales Rep from targetsApi
   const repAssignedTarget = useMemo(() => {
-    try {
-      const stored = localStorage.getItem('fieldassist_targets');
-      const list = stored ? JSON.parse(stored) : mockTargets;
-      if (Array.isArray(list)) {
-        const found = list.find(
-          (t: any) =>
-            (user?.id && t.repId === user.id) ||
-            (user?.name && t.repName.toLowerCase() === user.name.toLowerCase()) ||
-            (user?.email === 'vikram@fieldassist.io' && (t.repId === 'rep-1' || t.repName.toLowerCase().includes('vikram')))
-        );
-        if (found) return found;
-      }
-    } catch {}
-
-    // Only seed representative Vikram Sharma has predefined initial targets
-    if (user?.email === 'vikram@fieldassist.io') {
-      return {
-        salesTargetAmount: 500000,
-        salesAchievedAmount: 422500,
-        visitsTargetCount: 150,
-        visitsAchievedCount: 128,
-        status: 'On Track',
-      };
-    }
-
-    // All newly created accounts start with NO predefined targets
-    return null;
+    return targetsApi.getTargetForRep(user);
   }, [user]);
 
   // Sales Representative personal trajectory
@@ -310,16 +282,15 @@ export const Dashboard: React.FC = () => {
     );
   }, [visitsList, isRep, user]);
 
-  // Orders total for today
+  // Orders total for today: strictly calculated from actual booked orders
   const repTodayOrdersTotal = useMemo(() => {
-    if (!isNewRep) return 8000.0;
     return visibleOrders.reduce((sum, o) => sum + (Number(o.totalAmount) || 0), 0);
-  }, [isNewRep, visibleOrders]);
+  }, [visibleOrders]);
 
+  // Visits completed today: strictly calculated from actual completed visits (0 if none visited yet!)
   const repTodayVisitsCount = useMemo(() => {
-    if (!isNewRep) return 4;
     return visibleVisits.filter((v) => v.status === 'Completed').length;
-  }, [isNewRep, visibleVisits]);
+  }, [visibleVisits]);
 
   // Fetch daily analytics:
   const fetchDashboardStats = async () => {
@@ -751,17 +722,17 @@ export const Dashboard: React.FC = () => {
               {userCheckedInToday ? (
                 <>
                   <div className="text-xl font-black text-emerald-400">
-                    Active on Field
+                    Shift Active
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 text-slate-300 text-xs font-semibold">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Punch In: {userPunchInTime || '09:15 AM'}</span>
+                    <span>Punched In: {userPunchInTime ? new Date(userPunchInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Today'}</span>
                   </div>
                   <div className="text-[10px] text-slate-400 mt-2">
-                    Geofence Verified • GPS Active
+                    Geofence Verified • Real GPS Active
                   </div>
                 </>
-              ) : isNewRep ? (
+              ) : (
                 <>
                   <div className="text-xl font-black text-amber-400">
                     Not Checked In
@@ -770,20 +741,7 @@ export const Dashboard: React.FC = () => {
                     <span>Shift: 09:30 AM – 06:30 PM</span>
                   </div>
                   <div className="text-[10px] text-brand-400 mt-2">
-                    <Link to="/attendance" className="underline hover:text-brand-300 font-semibold">Clock in to begin shift</Link>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-xl font-black text-emerald-400">
-                    Active on Field
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-slate-300 text-xs font-semibold">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Punch In: 09:15 AM</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    Geofence Verified • 88% Battery
+                    <Link to="/attendance" className="underline hover:text-brand-300 font-semibold">Clock in on Attendance page</Link>
                   </div>
                 </>
               )}
@@ -801,33 +759,22 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              {isNewRep ? (
-                <>
-                  <div className="text-2xl font-black text-white font-mono">
-                    {repTodayVisitsCount} / {areaRetailers.length} Stores
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-purple-400 text-xs font-semibold">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Ready for first visit</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    Territory Outlets Ready
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-black text-white font-mono">
-                    4 / 6 Stores
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-purple-400 text-xs font-semibold">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>2 Stores Remaining</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    Next: Ganesh Grand Bazaar
-                  </div>
-                </>
-              )}
+              <div className="text-2xl font-black text-white font-mono">
+                {repTodayVisitsCount} / {areaRetailers.length} Stores
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 text-purple-400 text-xs font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>
+                  {repTodayVisitsCount === 0
+                    ? '0 Visits Completed Today'
+                    : `${repTodayVisitsCount} Stores Completed`}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-2">
+                {repTodayVisitsCount === 0
+                  ? 'All Territory Outlets Ready'
+                  : `${areaRetailers.length - repTodayVisitsCount} Outlets Remaining`}
+              </div>
             </div>
           </div>
 
@@ -842,33 +789,18 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
             <div>
-              {isNewRep ? (
-                <>
-                  <div className="text-2xl font-black text-white font-mono">
-                    ₹{repTodayOrdersTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-slate-400 text-xs font-semibold">
-                    <Package className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{visibleOrders.length} Orders Booked</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    Awaiting first store booking
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-2xl font-black text-white font-mono">
-                    ₹8,000.00
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1 text-emerald-400 text-xs font-semibold">
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                    <span>{visibleOrders.length} Orders Booked</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    100% Synced with Backend
-                  </div>
-                </>
-              )}
+              <div className="text-2xl font-black text-white font-mono">
+                ₹{repTodayOrdersTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1 text-slate-400 text-xs font-semibold">
+                <Package className="w-3.5 h-3.5 text-amber-400" />
+                <span>{visibleOrders.length} Booked Orders</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-2">
+                {visibleOrders.length === 0
+                  ? 'No orders booked yet today'
+                  : 'Total Secondary Sales Booked'}
+              </div>
             </div>
           </div>
         </div>

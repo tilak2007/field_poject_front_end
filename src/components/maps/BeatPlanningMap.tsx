@@ -16,6 +16,48 @@ import { LiveGpsMap } from './LiveGpsMap';
 import type { RepLiveTelemetry, GeofencedOutlet } from '../../api/gpsApi';
 import type { BeatPlan } from '../../types';
 
+// Calculate distance in km (Haversine formula)
+export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return Number((R * c).toFixed(1));
+}
+
+// Calculate bearing degrees and cardinal compass direction
+export function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): { degrees: number; cardinal: string } {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+  const phi1 = toRad(lat1);
+  const phi2 = toRad(lat2);
+  const deltaLam = toRad(lon2 - lon1);
+
+  const y = Math.sin(deltaLam) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(deltaLam);
+  let brng = toDeg(Math.atan2(y, x));
+  brng = (brng + 360) % 360;
+
+  const cardinals = [
+    'North (N)',
+    'North-East (NE)',
+    'East (E)',
+    'South-East (SE)',
+    'South (S)',
+    'South-West (SW)',
+    'West (W)',
+    'North-West (NW)',
+  ];
+  const index = Math.round(brng / 45) % 8;
+  return { degrees: Math.round(brng), cardinal: cardinals[index] };
+}
+
 export interface Waypoint {
   id: string;
   sequence: number;
@@ -256,10 +298,42 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
         (user?.email && b.repId === user.email)
     );
 
+    // Read logged-in user's recorded visits to eliminate any false claims
+    let userRecordedVisits: any[] = [];
+    try {
+      const savedVisits = localStorage.getItem('fieldassist_visits');
+      if (savedVisits) {
+        userRecordedVisits = JSON.parse(savedVisits);
+      }
+    } catch {}
+
+    const getWaypointVisitStatus = (outletName: string) => {
+      const match = userRecordedVisits.find(
+        (v) =>
+          (v.repId === userRepId || (user?.name && v.repName?.toLowerCase() === userName.toLowerCase())) &&
+          (v.retailerName?.toLowerCase().includes(outletName.toLowerCase()) ||
+            outletName.toLowerCase().includes(v.retailerName?.toLowerCase()))
+      );
+      if (match) {
+        if (match.status === 'Completed') {
+          return { status: 'Visited' as const, checkInTime: match.actualCheckIn, orderAmount: match.orderBookedAmount || 0 };
+        }
+        if (match.status === 'In Progress') {
+          return { status: 'In Progress' as const, checkInTime: match.actualCheckIn, orderAmount: 0 };
+        }
+      }
+      return { status: 'Scheduled' as const, checkInTime: undefined, orderAmount: 0 };
+    };
+
     if (userBeats.length > 0) {
       userBeats.forEach((b, idx) => {
         const routeId = b.id || `beat-user-${idx}`;
         const existingIdx = list.findIndex((r) => r.id === routeId);
+        const s1 = getWaypointVisitStatus(`${b.territory} Central Hub`);
+        const s2 = getWaypointVisitStatus('City Supermart Outlet');
+        const s3 = getWaypointVisitStatus('Venkateshwara General Stores');
+        const s4 = getWaypointVisitStatus('Annapurna Daily Fresh');
+
         const routeObj: BeatRoute = {
           id: routeId,
           code: b.code || `BEAT-BLR-${idx + 1}`,
@@ -283,9 +357,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
               y: 32,
               lat: (userCoords?.latitude || 12.9298) - 0.005,
               lng: (userCoords?.longitude || 77.5832) - 0.005,
-              status: 'Visited',
-              checkInTime: '09:30 AM',
-              orderAmount: 24500,
+              status: s1.status,
+              checkInTime: s1.checkInTime,
+              orderAmount: s1.orderAmount,
             },
             {
               id: `wp-u2-${routeId}`,
@@ -299,9 +373,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
               y: 25,
               lat: (userCoords?.latitude || 12.9298) + 0.003,
               lng: (userCoords?.longitude || 77.5832) - 0.002,
-              status: 'In Progress',
-              checkInTime: '10:45 AM',
-              orderAmount: 0,
+              status: s2.status,
+              checkInTime: s2.checkInTime,
+              orderAmount: s2.orderAmount,
             },
             {
               id: `wp-u3-${routeId}`,
@@ -315,8 +389,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
               y: 48,
               lat: (userCoords?.latitude || 12.9298) + 0.006,
               lng: (userCoords?.longitude || 77.5832) + 0.004,
-              status: 'Scheduled',
-              orderAmount: 0,
+              status: s3.status,
+              checkInTime: s3.checkInTime,
+              orderAmount: s3.orderAmount,
             },
             {
               id: `wp-u4-${routeId}`,
@@ -330,8 +405,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
               y: 65,
               lat: (userCoords?.latitude || 12.9298) - 0.004,
               lng: (userCoords?.longitude || 77.5832) + 0.007,
-              status: 'Scheduled',
-              orderAmount: 0,
+              status: s4.status,
+              checkInTime: s4.checkInTime,
+              orderAmount: s4.orderAmount,
             },
           ],
         };
@@ -343,6 +419,10 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
         }
       });
     } else if (user?.role === 'Sales Representative' && user?.name && user?.name !== 'Vikram Sharma') {
+      const myS1 = getWaypointVisitStatus(`${userTerritory} Depot & Hub`);
+      const myS2 = getWaypointVisitStatus('Sri Krishna Provisions');
+      const myS3 = getWaypointVisitStatus('Balaji Supermart');
+
       // Synthesize user's assigned route at the top
       const userRoute: BeatRoute = {
         id: `beat-assigned-${user.id || 'my-beat'}`,
@@ -367,9 +447,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
             y: 35,
             lat: (userCoords?.latitude || 12.9298) - 0.004,
             lng: (userCoords?.longitude || 77.5832) - 0.004,
-            status: 'Visited',
-            checkInTime: '09:30 AM',
-            orderAmount: 18500,
+            status: myS1.status,
+            checkInTime: myS1.checkInTime,
+            orderAmount: myS1.orderAmount,
           },
           {
             id: 'wp-my-2',
@@ -383,9 +463,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
             y: 28,
             lat: (userCoords?.latitude || 12.9298) + 0.002,
             lng: (userCoords?.longitude || 77.5832) - 0.002,
-            status: 'In Progress',
-            checkInTime: '10:45 AM',
-            orderAmount: 0,
+            status: myS2.status,
+            checkInTime: myS2.checkInTime,
+            orderAmount: myS2.orderAmount,
           },
           {
             id: 'wp-my-3',
@@ -399,8 +479,9 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
             y: 52,
             lat: (userCoords?.latitude || 12.9298) + 0.005,
             lng: (userCoords?.longitude || 77.5832) + 0.003,
-            status: 'Scheduled',
-            orderAmount: 0,
+            status: myS3.status,
+            checkInTime: myS3.checkInTime,
+            orderAmount: myS3.orderAmount,
           },
         ],
       };
@@ -677,6 +758,21 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
                       className="animate-pulse"
                     />
                   )}
+
+                  {/* Directional Vector Line from User's active location to selected waypoint */}
+                  {selectedWaypoint && activeWaypoint && selectedWaypoint.id !== activeWaypoint.id && (
+                    <line
+                      x1={activeWaypoint.x * 10}
+                      y1={activeWaypoint.y * 7}
+                      x2={selectedWaypoint.x * 10}
+                      y2={selectedWaypoint.y * 7}
+                      stroke="#10b981"
+                      strokeWidth="2.5"
+                      strokeDasharray="6 4"
+                      strokeLinecap="round"
+                      className="animate-pulse"
+                    />
+                  )}
                 </svg>
 
                 {/* Waypoint Markers */}
@@ -873,6 +969,49 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
                   </div>
                 ) : null}
 
+                {/* Real GPS Bearing, Distance & Google Maps Navigation */}
+                {(() => {
+                  const originLat = userCoords?.latitude || activeWaypoint?.lat || 12.9298;
+                  const originLng = userCoords?.longitude || activeWaypoint?.lng || 77.5832;
+                  const destLat = selectedWaypoint.lat || 12.9298;
+                  const destLng = selectedWaypoint.lng || 77.5832;
+                  const distKm = calculateDistanceKm(originLat, originLng, destLat, destLng);
+                  const bearing = calculateBearing(originLat, originLng, destLat, destLng);
+                  const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${destLat},${destLng}&travelmode=driving`;
+
+                  return (
+                    <div className="space-y-2.5">
+                      <div className="p-3 rounded-2xl bg-slate-950/80 border border-brand-500/30 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-400 flex items-center gap-1.5 font-semibold">
+                            <Compass className="w-3.5 h-3.5 text-brand-400 animate-pulse" />
+                            <span>Live Bearing & Distance:</span>
+                          </span>
+                          <span className="font-bold text-emerald-400 font-mono">
+                            {distKm} km away
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-slate-300">
+                          <span className="text-[11px] text-slate-400">Direction from My GPS:</span>
+                          <span className="font-mono font-bold text-brand-300 text-[11px]">
+                            {bearing.cardinal} ({bearing.degrees}°)
+                          </span>
+                        </div>
+                      </div>
+
+                      <a
+                        href={navUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                      >
+                        <Navigation className="w-4 h-4 transform rotate-45" />
+                        <span>🧭 Turn-by-Turn Navigate (Google Maps)</span>
+                      </a>
+                    </div>
+                  );
+                })()}
+
                 <button
                   onClick={() => setSelectedWaypoint(null)}
                   className="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
@@ -904,6 +1043,10 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
                 const isSelected = selectedWaypoint?.id === wp.id;
                 const isCurrent = wp.status === 'In Progress';
                 const isVisited = wp.status === 'Visited';
+                const originLat = userCoords?.latitude || activeWaypoint?.lat || 12.9298;
+                const originLng = userCoords?.longitude || activeWaypoint?.lng || 77.5832;
+                const dist = calculateDistanceKm(originLat, originLng, wp.lat, wp.lng);
+                const navUrl = `https://www.google.com/maps/dir/?api=1&origin=${originLat},${originLng}&destination=${wp.lat},${wp.lng}&travelmode=driving`;
 
                 return (
                   <div
@@ -935,7 +1078,20 @@ export const BeatPlanningMap: React.FC<BeatPlanningMapProps> = ({
                       </div>
                     </div>
 
-                    <div className="shrink-0 text-right">
+                    <div className="shrink-0 flex items-center gap-2">
+                      <span className="text-[10px] text-emerald-400 font-mono font-bold">
+                        {dist} km
+                      </span>
+                      <a
+                        href={navUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 transition-colors cursor-pointer"
+                        title="Turn-by-turn Navigation in Google Maps"
+                      >
+                        <Navigation className="w-3.5 h-3.5 transform rotate-45" />
+                      </a>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
                           isVisited

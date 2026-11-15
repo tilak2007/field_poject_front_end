@@ -177,12 +177,22 @@ export const LiveGpsMap: React.FC<LiveGpsMapProps> = ({
         icon: storeIcon,
       })
         .bindPopup(`
-          <div style="font-family: inherit; padding: 4px;">
+          <div style="font-family: inherit; padding: 4px; min-width: 190px;">
             <div style="font-weight: 800; color: #0f172a; font-size: 13px;">${outlet.name}</div>
             <div style="font-size: 11px; color: #475569; margin-top: 2px;">Owner: ${outlet.ownerName} (${outlet.type})</div>
             <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${outlet.address}</div>
             <div style="margin-top: 6px; display: inline-block; padding: 2px 8px; border-radius: 9999px; background: #ecfdf5; color: #047857; font-size: 10px; font-weight: 700;">
               Geofence Radius: ${outlet.geofenceRadiusMeters}m
+            </div>
+            <div style="margin-top: 8px;">
+              <a
+                href="https://www.google.com/maps/dir/?api=1&origin=${myDeviceCoords ? `${myDeviceCoords.lat},${myDeviceCoords.lng}` : ''}&destination=${outlet.coords.lat},${outlet.coords.lng}&travelmode=driving"
+                target="_blank"
+                rel="noopener noreferrer"
+                style="display: flex; align-items: center; justify-content: center; gap: 4px; background: #059669; color: white; padding: 6px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; text-decoration: none;"
+              >
+                🧭 Navigate (Google Maps)
+              </a>
             </div>
           </div>
         `)
