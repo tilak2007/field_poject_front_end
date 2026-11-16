@@ -229,7 +229,7 @@ export const attendanceApi = {
       : (this.resolveRepId(user) || null);
     const userKey = user?.id || (user?.email ? user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId || 'rep');
 
-    // Try syncing any offline-pending records first
+    // Sync any offline-pending records first
     if (isOnline()) {
       await this.syncPendingAttendance();
     }
@@ -237,40 +237,66 @@ export const attendanceApi = {
     // ── ONLINE: Supabase is the source of truth ──
     if (isOnline()) {
       try {
-        const { data, error } = await supabase
-          .from('attendance')
-          .select('*')
-          .eq('work_date', today)
-          .eq('rep_id', repId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        let dbRecord: any = null;
 
-        if (!error && data) {
+        // Query 1: by rep_id (works for known reps: rep-1, rep-2, etc.)
+        if (repId) {
+          const { data, error } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('work_date', today)
+            .eq('rep_id', repId)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!error && data) dbRecord = data;
+        }
+
+        // Query 2: by user_id (works for new users whose punch-in had rep_id=null)
+        if (!dbRecord && user?.id) {
+          const { data: data2, error: error2 } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('work_date', today)
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (!error2 && data2) dbRecord = data2;
+        }
+
+        if (dbRecord) {
           const record: AttendanceRecord = {
-            id: data.id,
-            repId: data.rep_id || repId,
+            id: dbRecord.id,
+            repId: dbRecord.rep_id || repId || undefined,
             repName: user?.name || 'Sales Representative',
-            work_date: data.work_date,
-            check_in_time: data.check_in_time,
-            check_out_time: data.check_out_time,
-            latitude: data.latitude,
-            longitude: data.longitude,
-            notes: data.notes,
-            status: data.status,
-            working_hours: data.working_hours,
-            location_name: data.location_name || this.getCachedTodayAttendance(user)?.location_name,
+            work_date: dbRecord.work_date,
+            check_in_time: dbRecord.check_in_time,
+            check_out_time: dbRecord.check_out_time,
+            latitude: dbRecord.latitude,
+            longitude: dbRecord.longitude,
+            notes: dbRecord.notes,
+            status: dbRecord.status,
+            working_hours: dbRecord.working_hours,
+            location_name: dbRecord.location_name || this.getCachedTodayAttendance(user)?.location_name,
             offline_pending: false,
           };
-          // Update local cache with fresh Supabase data
+          // Update local cache with authoritative Supabase data
           writeToCache(record, repId ?? '', userKey, today);
           return record;
         }
 
-        if (!error && !data) {
-          clearCache(repId ?? '', userKey, today);
-          return null;
+        // Both queries returned nothing — but DON'T clear cache.
+        // The user may have punched in offline (pending sync), or there
+        // may be a temporary network issue. Preserve whatever is cached.
+        const cached = this.getCachedTodayAttendance(user);
+        if (cached?.offline_pending) {
+          console.log('[Attendance] Offline punch-in pending sync — keeping cached state');
+          return cached;
         }
+        // No record in Supabase AND no pending offline record → genuinely not punched in
+        return null;
+
       } catch (err) {
         console.warn('[Attendance] Supabase read failed, falling back to cache:', err);
       }
@@ -278,9 +304,7 @@ export const attendanceApi = {
 
     // ── OFFLINE: Fall back to localStorage cache ──
     const cached = this.getCachedTodayAttendance(user);
-    if (cached) {
-      console.log('[Attendance] Offline mode — using cached attendance record');
-    }
+    if (cached) console.log('[Attendance] Offline mode — using cached attendance record');
     return cached;
   },
 

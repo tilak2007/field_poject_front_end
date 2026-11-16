@@ -67,15 +67,21 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setTodayAttendance(cached);
     }
 
-    // 2. Background Supabase verification — do NOT set to null on failure
+    // 2. Background Supabase verification
+    //    RULE: Only UPDATE state with Supabase data, never RESET to null.
+    //    State can only become null via explicit resetPunch().
     try {
       const verified = await attendanceApi.getTodayAttendance(user);
       if (verified) {
+        // Supabase found a record — use it (most authoritative)
         setTodayAttendance(verified);
+      } else if (!cached) {
+        // Supabase returned nothing AND no local cache — genuinely not punched in
+        setTodayAttendance(null);
       }
-      // If nothing returned from Supabase AND no local cache, leave as-is
+      // verified=null but cached exists → keep cached (offline pending or network blip)
     } catch {
-      // Keep cached value on network failure — do NOT reset to null
+      // Network error — keep whatever state is already set
     }
   }, [user]);
 
@@ -83,16 +89,14 @@ export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     if (!user?.id && !user?.email) return;
     const userKey = user.id || user.email || '';
-    if (loadedForUserRef.current === userKey) return; // avoid re-fetch on re-renders
+    if (loadedForUserRef.current === userKey) return;
     loadedForUserRef.current = userKey;
 
-    // Immediately read cache for instant state
+    // Always read cache first for instant state (no flicker)
     const cached = attendanceApi.getCachedTodayAttendance(user);
-    if (cached) {
-      setTodayAttendance(cached);
-    }
+    if (cached) setTodayAttendance(cached);
 
-    // Background Supabase sync
+    // Background Supabase sync to verify/update
     refresh();
   }, [user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
