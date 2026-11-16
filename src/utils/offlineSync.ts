@@ -2,10 +2,15 @@
  * FieldAssist Offline Sync Engine
  * Handles automatic background synchronization when returning online,
  * LocalStorage queue processing, and connectivity status monitoring.
+ *
+ * Syncs:
+ *   1. Pending offline attendance (punch-in / punch-out) → Supabase attendance table
+ *   2. Pending offline orders → /api/orders or Supabase orders table
  */
 
 import { supabase } from '../lib/supabaseClient';
 import { apiFetch } from '../api/client';
+import { attendanceApi } from '../api/attendanceApi';
 import type { Order } from '../types';
 
 const ORDERS_KEY = 'fieldassist_orders';
@@ -31,6 +36,16 @@ export function getPendingOrdersCount(): number {
   } catch {
     return 0;
   }
+}
+
+/**
+ * Returns true if there are offline attendance records waiting to be synced
+ */
+export function hasPendingAttendance(): boolean {
+  return !!(
+    localStorage.getItem('fieldassist_attendance_pending_checkin') ||
+    localStorage.getItem('fieldassist_attendance_pending_checkout')
+  );
 }
 
 /**
@@ -118,13 +133,22 @@ export async function syncPendingOrders(): Promise<SyncResult> {
 }
 
 /**
- * Initialize automatic background listener for online events
+ * Initialize automatic background listener for online events.
+ * Syncs both attendance AND orders when connectivity is restored.
  */
 export function initOfflineSyncListeners(onSyncComplete?: (result: SyncResult) => void): () => void {
   if (typeof window === 'undefined') return () => {};
 
   const handleOnline = async () => {
     console.log('[FieldAssist Sync Engine] Network restored. Starting automatic cloud sync...');
+
+    // 1. Sync pending attendance punch-in / punch-out records to Supabase
+    if (hasPendingAttendance()) {
+      await attendanceApi.syncPendingAttendance();
+      console.log('[FieldAssist Sync Engine] Offline attendance records synced to Supabase.');
+    }
+
+    // 2. Sync pending offline orders to Supabase / backend
     const result = await syncPendingOrders();
     if (result.syncedCount > 0) {
       console.log(`[FieldAssist Sync Engine] Successfully synced ${result.syncedCount} offline orders to cloud database!`);
@@ -136,7 +160,7 @@ export function initOfflineSyncListeners(onSyncComplete?: (result: SyncResult) =
 
   // Periodic background check every 45s if online
   const intervalId = setInterval(() => {
-    if (navigator.onLine && getPendingOrdersCount() > 0) {
+    if (navigator.onLine && (getPendingOrdersCount() > 0 || hasPendingAttendance())) {
       handleOnline();
     }
   }, 45000);
