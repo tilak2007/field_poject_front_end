@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { AttendanceProvider } from './context/AttendanceContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Layout } from './components/layout/Layout';
 import { LandingPage } from './pages/LandingPage';
@@ -27,6 +28,7 @@ import { LiveTracking } from './pages/LiveTracking';
 export const App: React.FC = () => {
   return (
     <AuthProvider>
+      <AttendanceProvider>
       <BrowserRouter>
         <Routes>
           {/* Public Home Page */}
@@ -152,6 +154,7 @@ export const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      </AttendanceProvider>
     </AuthProvider>
   );
 };

@@ -46,6 +46,7 @@ import {
 } from '../data/mockData';
 import { dashboardApi, targetsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { useAttendance } from '../context/AttendanceContext';
 
 interface DashboardStats {
   today_orders_count: number;
@@ -76,25 +77,10 @@ export const Dashboard: React.FC = () => {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Today shift telemetry for representative
-  const [userCheckedInToday, setUserCheckedInToday] = useState(false);
-  const [userPunchInTime, setUserPunchInTime] = useState<string | null>(null);
-
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0];
-    const userKey = user?.id || (user?.email ? user.email.replace(/[^a-zA-Z0-9]/g, '_') : 'usr_default');
-    const userRecord = localStorage.getItem(`fieldassist_attendance_${userKey}_${today}`);
-    const localRecord = userRecord || localStorage.getItem(`attendance_${today}`);
-    if (localRecord) {
-      try {
-        const parsed = JSON.parse(localRecord);
-        if (parsed?.check_in_time) {
-          setUserCheckedInToday(true);
-          setUserPunchInTime(parsed.check_in_time);
-        }
-      } catch {}
-    }
-  }, [user]);
+  // Today shift telemetry — sourced from the global AttendanceContext (never stale on navigation)
+  const { isPunchedIn, todayAttendance: todayAtt } = useAttendance();
+  const userCheckedInToday = isPunchedIn;
+  const userPunchInTime = todayAtt?.check_in_time ?? null;
 
   // Specified Area Retail Network: Load all retail outlets in the representative's assigned territory
   const areaRetailers = useMemo(() => {

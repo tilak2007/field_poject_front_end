@@ -14,22 +14,30 @@ import {
   ShieldCheck,
   RotateCcw,
 } from 'lucide-react';
-import { attendanceApi, type AttendanceRecord, type AttendanceHistoryItem } from '../api/attendanceApi';
+import { attendanceApi, type AttendanceHistoryItem } from '../api/attendanceApi';
 import { useAuth } from '../context/AuthContext';
+import { useAttendance } from '../context/AttendanceContext';
 import { exportToCsv } from '../utils/exportCsv';
 import { acquireLiveLocation, type GeoLocationResult } from '../utils/geolocation';
 import { isUnderManagerTerritory } from '../utils/territory';
 
 export const Attendance: React.FC = () => {
   const { user } = useAuth();
+  // ── Use global attendance context — state persists across page navigations ──
+  const {
+    todayAttendance,
+    isSubmitting,
+    isPunchedIn,
+    isPunchedOut,
+    punchIn,
+    punchOut,
+    refresh: refreshAttendance,
+    resetPunch,
+  } = useAttendance();
+
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
 
-  // Synchronous cache read so there is ZERO delay or flash of "Check In" button
-  const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(() => {
-    return attendanceApi.getCachedTodayAttendance(user);
-  });
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Form input notes
@@ -70,23 +78,12 @@ export const Attendance: React.FC = () => {
   // Attendance History records
   const [historyList, setHistoryList] = useState<AttendanceHistoryItem[]>([]);
 
-  // 1. Fetch today's attendance and history
+  // 1. Load attendance history (the punch-in state comes from the global context, not re-fetched)
   const loadAttendanceData = async () => {
     setIsLoading(true);
     try {
-      // First ensure synchronous cache is loaded
-      const cached = attendanceApi.getCachedTodayAttendance(user);
-      if (cached) {
-        setTodayAttendance(cached);
-      }
-
-      // Fetch verified record from Supabase
-      const verified = await attendanceApi.getTodayAttendance(user);
-      if (verified) {
-        setTodayAttendance(verified);
-      } else if (!cached) {
-        setTodayAttendance(null);
-      }
+      // Refresh the global punch-in state from storage + Supabase
+      await refreshAttendance();
 
       // Fetch history records (scoped by role & territory)
       const hist = await attendanceApi.getAttendanceHistory(user);
@@ -134,10 +131,9 @@ export const Attendance: React.FC = () => {
     detectLocation();
   }, [user]);
 
-  // 3. Punch In (Start Shift)
+  // 3. Punch In (Start Shift) — delegates to global AttendanceContext
   const handleCheckIn = async () => {
     if (!user) return;
-    setIsSubmitting(true);
     setFeedback(null);
     const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const locationDisplay =
@@ -145,15 +141,12 @@ export const Attendance: React.FC = () => {
       `${user?.territory || 'Bengaluru South'} (${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)})`;
 
     try {
-      const rec = await attendanceApi.checkIn({
-        user,
+      await punchIn({
         latitude: coords.latitude,
         longitude: coords.longitude,
         locationName: locationDisplay,
         notes: checkInNotes,
       });
-
-      setTodayAttendance(rec);
 
       const updatedHistory = await attendanceApi.getAttendanceHistory(user);
       setHistoryList(updatedHistory);
@@ -167,27 +160,20 @@ export const Attendance: React.FC = () => {
         type: 'error',
         message: err.message || 'Check-in failed. Please try again.',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  // 4. Punch Out (End Shift)
+  // 4. Punch Out (End Shift) — delegates to global AttendanceContext
   const handleCheckOut = async () => {
     if (!user || !todayAttendance) return;
-    setIsSubmitting(true);
     setFeedback(null);
     const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     try {
-      const rec = await attendanceApi.checkOut({
-        user,
-        todayAttendance,
+      const rec = await punchOut({
         notes: checkOutNotes,
         endLocation: coords.city,
       });
-
-      setTodayAttendance(rec);
 
       const updatedHistory = await attendanceApi.getAttendanceHistory(user);
       setHistoryList(updatedHistory);
@@ -201,15 +187,12 @@ export const Attendance: React.FC = () => {
         type: 'error',
         message: err.message || 'Check-out failed. Please try again.',
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
   // 5. Reset Today's Punch (For testing / demonstration)
   const handleResetTodayPunch = async () => {
-    await attendanceApi.resetTodayPunch(user);
-    setTodayAttendance(null);
+    await resetPunch();
     const updatedHistory = await attendanceApi.getAttendanceHistory(user);
     setHistoryList(updatedHistory);
     setFeedback({
@@ -219,8 +202,9 @@ export const Attendance: React.FC = () => {
     setTimeout(() => setFeedback(null), 3500);
   };
 
-  const isCheckedIn = Boolean(todayAttendance?.check_in_time);
-  const isCheckedOut = Boolean(todayAttendance?.check_out_time);
+  // Derived from global context — these never flash "Not Checked In" on navigation
+  const isCheckedIn = isPunchedIn;
+  const isCheckedOut = isPunchedOut;
 
   const isManagerOrAdmin = user?.role === 'System Admin' || user?.role === 'Sales Manager';
   const isRep = !isManagerOrAdmin;
