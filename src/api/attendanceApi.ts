@@ -340,17 +340,14 @@ export const attendanceApi = {
           return record;
         }
 
+        // Supabase returned an error — log and fall through to offline mode
         if (error) {
-          console.error('[Attendance] Supabase punch-in error:', error.message);
-          throw new Error(`Punch-in failed: ${error.message}`);
+          console.warn('[Attendance] Supabase punch-in error, saving offline:', error.message);
+          // fall through to offline
         }
       } catch (err: any) {
-        // Network error (not a Supabase logic error) — fall through to offline mode
-        if (!err.message?.includes('Punch-in failed')) {
-          console.warn('[Attendance] Network error during punch-in, saving offline:', err.message);
-        } else {
-          throw err;
-        }
+        // Network / fetch exception — fall through to offline mode
+        console.warn('[Attendance] Network error during punch-in, saving offline:', err?.message);
       }
     }
 
@@ -437,16 +434,14 @@ export const attendanceApi = {
           return synced;
         }
 
+        // Supabase returned an error — log and fall through to offline mode
         if (error) {
-          console.error('[Attendance] Supabase punch-out error:', error.message);
-          throw new Error(`Punch-out failed: ${error.message}`);
+          console.warn('[Attendance] Supabase punch-out error, saving offline:', error.message);
+          // fall through to offline
         }
       } catch (err: any) {
-        if (!err.message?.includes('Punch-out failed')) {
-          console.warn('[Attendance] Network error during punch-out, saving offline:', err.message);
-        } else {
-          throw err;
-        }
+        // Network / fetch exception — fall through to offline mode
+        console.warn('[Attendance] Network error during punch-out, saving offline:', err?.message);
       }
     }
 
