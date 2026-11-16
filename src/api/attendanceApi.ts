@@ -93,36 +93,37 @@ export const attendanceApi = {
     return 'rep-1';
   },
 
-  // ─── Ensure rep row exists in Supabase ───────────────────────────────────
+  // ─── Ensure rep exists in Supabase ───────────────────────────────────────
+  // Strategy: look up rep by email from sales_reps (reliable, no INSERT needed).
+  // Falls back to null if not found — attendance table allows null rep_id.
+
+  async resolveDbRepId(user: {
+    id?: string; email?: string;
+  }): Promise<string | null> {
+    if (!user.email) return null;
+    if (!isOnline()) return this.resolveRepId(user) || null;
+
+    try {
+      // Try to find existing rep by email
+      const { data } = await supabase
+        .from('sales_reps')
+        .select('id')
+        .eq('email', user.email)
+        .maybeSingle();
+
+      if (data?.id) return data.id;
+    } catch {}
+
+    // Known demo reps — static mapping
+    return this.resolveRepId(user) || null;
+  },
 
   async ensureRepExists(user: {
     id?: string; name?: string; email?: string; territory?: string; region?: string;
   }): Promise<string> {
-    const repId = this.resolveRepId(user);
-    if (!isOnline()) return repId;
-    try {
-      const payload = {
-        id: repId,
-        name: user.name || 'Sales Representative',
-        code: `REP-${(user.territory || 'BLR').slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-3)}`,
-        email: user.email || `${repId}@fieldassist.io`,
-        territory: user.territory || 'Bengaluru South',
-        region: user.region || 'South Zone (Bengaluru)',
-        status: 'Active',
-        battery_level: 92,
-        last_check_in: 'Just now',
-        target_amount: 0,
-        target_achieved_pct: 0,
-        visits_today_count: 0,
-        total_distance_km: 0,
-        sales_closed_amount: 0,
-        join_date: new Date().toISOString().split('T')[0],
-      };
-      await supabase.from('sales_reps').upsert([payload], { onConflict: 'id' });
-    } catch (err) {
-      console.warn('ensureRepExists notice:', err);
-    }
-    return repId;
+    // Just return the resolved repId — do NOT attempt to insert into sales_reps
+    // (anon role may not have INSERT permission; attendance allows null rep_id)
+    return this.resolveRepId(user);
   },
 
   // ─── Sync any pending offline attendance records to Supabase ─────────────
@@ -223,8 +224,10 @@ export const attendanceApi = {
 
   async getTodayAttendance(user?: { id?: string; email?: string; name?: string } | null): Promise<AttendanceRecord | null> {
     const today = getTodayDateStr();
-    const repId = this.resolveRepId(user);
-    const userKey = user?.id || (user?.email ? user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId);
+    const repId = isOnline()
+      ? await this.resolveDbRepId(user || {})
+      : (this.resolveRepId(user) || null);
+    const userKey = user?.id || (user?.email ? user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId || 'rep');
 
     // Try syncing any offline-pending records first
     if (isOnline()) {
@@ -260,13 +263,12 @@ export const attendanceApi = {
             offline_pending: false,
           };
           // Update local cache with fresh Supabase data
-          writeToCache(record, repId, userKey, today);
+          writeToCache(record, repId ?? '', userKey, today);
           return record;
         }
 
         if (!error && !data) {
-          // Supabase confirmed no record exists today — clear stale cache
-          clearCache(repId, userKey, today);
+          clearCache(repId ?? '', userKey, today);
           return null;
         }
       } catch (err) {
@@ -294,8 +296,11 @@ export const attendanceApi = {
     const today = getTodayDateStr();
     const nowIso = new Date().toISOString();
     const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const repId = await this.ensureRepExists(params.user);
-    const userKey = params.user.id || (params.user.email ? params.user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId);
+    // Look up repId from DB by email (reliable — no INSERT into sales_reps needed)
+    const repId = isOnline()
+      ? await this.resolveDbRepId(params.user)
+      : (this.resolveRepId(params.user) || null);
+    const userKey = params.user.id || (params.user.email ? params.user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId || 'rep');
     const locationDisplay = params.locationName ||
       `${params.user.territory || 'Bengaluru South'} (${params.latitude.toFixed(4)}, ${params.longitude.toFixed(4)})`;
 
@@ -305,7 +310,8 @@ export const attendanceApi = {
         const { data, error } = await supabase
           .from('attendance')
           .insert([{
-            rep_id: repId,
+            rep_id: repId,       // null for new users not yet in sales_reps — allowed by DB
+            user_id: params.user.id || null,  // Supabase auth UUID
             work_date: today,
             check_in_time: nowIso,
             latitude: params.latitude,
@@ -321,7 +327,7 @@ export const attendanceApi = {
           // Success — build record from Supabase response
           const record: AttendanceRecord = {
             id: data.id,
-            repId,
+            repId: repId ?? undefined,
             repName: params.user.name || 'Sales Representative',
             work_date: today,
             check_in_time: data.check_in_time || nowIso,
@@ -333,8 +339,7 @@ export const attendanceApi = {
             working_hours: 0,
             offline_pending: false,
           };
-          // Cache in localStorage (read-through cache only)
-          writeToCache(record, repId, userKey, today);
+          writeToCache(record, repId ?? '', userKey, today);
           this._addToHistory(record, params.user, locationDisplay, timeFormatted);
           console.log('[Attendance] Punch-in saved to Supabase:', data.id);
           return record;
@@ -354,7 +359,7 @@ export const attendanceApi = {
     // ── OFFLINE: Save locally and queue for sync ──
     const offlineRecord: AttendanceRecord = {
       id: `att-offline-${Date.now()}`,
-      repId,
+      repId: repId ?? undefined,
       repName: params.user.name || 'Sales Representative',
       work_date: today,
       check_in_time: nowIso,
@@ -367,7 +372,7 @@ export const attendanceApi = {
       offline_pending: true,
     };
 
-    writeToCache(offlineRecord, repId, userKey, today);
+    writeToCache(offlineRecord, repId ?? '', userKey, today);
     // Queue for Supabase sync when online
     localStorage.setItem('fieldassist_attendance_pending_checkin', JSON.stringify(offlineRecord));
     this._addToHistory(offlineRecord, params.user, locationDisplay, timeFormatted);
@@ -386,8 +391,10 @@ export const attendanceApi = {
     const today = getTodayDateStr();
     const nowIso = new Date().toISOString();
     const timeFormatted = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const repId = this.resolveRepId(params.user);
-    const userKey = params.user.id || (params.user.email ? params.user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId);
+    const repId = isOnline()
+      ? await this.resolveDbRepId(params.user)
+      : (this.resolveRepId(params.user) || null);
+    const userKey = params.user.id || (params.user.email ? params.user.email.replace(/[^a-zA-Z0-9]/g, '_') : repId || 'rep');
 
     const checkInDate = params.todayAttendance.check_in_time
       ? new Date(params.todayAttendance.check_in_time) : new Date();
@@ -428,8 +435,8 @@ export const attendanceApi = {
         const { error } = await query;
         if (!error) {
           const synced = { ...updatedRecord, offline_pending: false };
-          writeToCache(synced, repId, userKey, today);
-          this._updateHistoryCheckout(repId, today, timeFormatted, diffHours, params.endLocation || params.user.territory);
+          writeToCache(synced, repId ?? '', userKey, today);
+          this._updateHistoryCheckout(repId ?? '', today, timeFormatted, diffHours, params.endLocation || params.user.territory);
           console.log('[Attendance] Punch-out saved to Supabase');
           return synced;
         }
@@ -447,9 +454,9 @@ export const attendanceApi = {
 
     // ── OFFLINE: Save locally and queue for sync ──
     const offlineRecord = { ...updatedRecord, offline_pending: true };
-    writeToCache(offlineRecord, repId, userKey, today);
+    writeToCache(offlineRecord, repId ?? '', userKey, today);
     localStorage.setItem('fieldassist_attendance_pending_checkout', JSON.stringify(offlineRecord));
-    this._updateHistoryCheckout(repId, today, timeFormatted, diffHours, params.endLocation || params.user.territory);
+    this._updateHistoryCheckout(repId ?? '', today, timeFormatted, diffHours, params.endLocation || params.user.territory);
     console.warn('[Attendance] Offline mode — punch-out saved locally, will sync when online');
     return offlineRecord;
   },
