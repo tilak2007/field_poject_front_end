@@ -1,23 +1,18 @@
 /**
  * AttendanceContext — Global session-level punch-in/out state manager.
  *
- * Problem this solves:
- *   The Attendance page component unmounts when users navigate away and remounts
- *   on return, resetting all local useState. Even though data is written to
- *   localStorage, the async Supabase re-fetch on remount could momentarily
- *   show "Not Checked In" before resolving. More importantly, any page that
- *   wants to know if the user is currently punched in must duplicate the
- *   localStorage read logic.
+ * Lives at the App root (outside BrowserRouter) so it NEVER unmounts on
+ * page navigation. The punch-in state is therefore always preserved.
  *
- * Solution:
- *   This context lives at the App root (never unmounts) and owns the
- *   authoritative `todayAttendance` state. It pre-loads synchronously from
- *   localStorage on mount so there is ZERO flash of incorrect state. All
- *   pages that need punch state import this context instead of reading
- *   localStorage themselves.
+ * Fix history:
+ *   v1 — initial read passed `null` user to getCachedTodayAttendance, so the
+ *         correct localStorage key was never found on first render.
+ *   v2 — initial read now correctly passes the already-available `user` object
+ *         from useAuth() (which reads synchronously from localStorage itself).
+ *         Additionally, a storage event listener keeps state in sync across tabs.
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { attendanceApi, type AttendanceRecord } from '../api/attendanceApi';
 import { useAuth } from './AuthContext';
 
@@ -48,50 +43,76 @@ interface AttendanceContextType {
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
 
 export const AttendanceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // useAuth() reads synchronously from localStorage — user is already populated on first render
   const { user } = useAuth();
 
-  // ── Synchronous initializer: reads localStorage immediately (zero flash) ──
+  // ── Synchronous initializer: MUST pass `user` (not null) so the right cache key is read ──
+  // Because useAuth() runs before this useState call in the same render, `user` is available here.
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(() => {
-    return attendanceApi.getCachedTodayAttendance(null); // initial read without user (before auth)
+    return attendanceApi.getCachedTodayAttendance(user);
   });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ── Re-read from cache when user is known, then verify with Supabase ──
+  // Track whether we have already loaded for the current user to avoid double-fetches
+  const loadedForUserRef = useRef<string | null>(null);
+
+  // ── Refresh: re-read cache then verify with Supabase ──
   const refresh = useCallback(async () => {
     if (!user) return;
 
-    // 1. Synchronous cache read first (zero delay)
+    // 1. Synchronous cache read first (zero delay, no flash)
     const cached = attendanceApi.getCachedTodayAttendance(user);
     if (cached) {
       setTodayAttendance(cached);
     }
 
-    // 2. Async Supabase verification
+    // 2. Background Supabase verification — do NOT set to null on failure
     try {
       const verified = await attendanceApi.getTodayAttendance(user);
       if (verified) {
         setTodayAttendance(verified);
-      } else if (!cached) {
-        setTodayAttendance(null);
       }
+      // If nothing returned from Supabase AND no local cache, leave as-is
     } catch {
       // Keep cached value on network failure — do NOT reset to null
     }
   }, [user]);
 
-  // Run once when user is determined (login) and whenever user changes
+  // ── Run once per unique user identity (login) ──
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id && !user?.email) return;
+    const userKey = user.id || user.email || '';
+    if (loadedForUserRef.current === userKey) return; // avoid re-fetch on re-renders
+    loadedForUserRef.current = userKey;
 
-    // Immediately load from cache for instant display
+    // Immediately read cache for instant state
     const cached = attendanceApi.getCachedTodayAttendance(user);
     if (cached) {
       setTodayAttendance(cached);
     }
 
-    // Then verify in background (don't await — no blocking)
+    // Background Supabase sync
     refresh();
-  }, [user?.id]); // Only re-run when user identity changes, NOT on every render
+  }, [user?.id, user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Storage event: keeps state in sync if another tab writes the attendance key ──
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.key || !e.newValue) return;
+      const today = new Date().toISOString().split('T')[0];
+      if (e.key.includes('attendance') && e.key.includes(today)) {
+        try {
+          const parsed: AttendanceRecord = JSON.parse(e.newValue);
+          if (parsed?.work_date === today) {
+            setTodayAttendance(parsed);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   // ── Punch In ──
   const punchIn = useCallback(
